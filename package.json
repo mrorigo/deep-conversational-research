@@ -1,0 +1,26 @@
+{
+  "name": "deep-conversational-research",
+  "version": "1.0.0",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "description": "",
+  "dependencies": {
+    "dotenv": "^16.4.7",
+    "js-tiktoken": "^1.0.18",
+    "jsdom": "^26.0.0",
+    "lodash-es": "^4.17.21",
+    "openai": "^4.83.0",
+    "p-limit": "^6.2.0",
+    "typescript": "^5.7.3",
+    "zod": "^3.24.1"
+  },
+  "devDependencies": {
+    "@types/jsdom": "^21.1.7",
+    "@types/lodash-es": "^4.17.12"
+  }
+}
