@@ -57,10 +57,7 @@ class Network {
       );
     }
 
-    // Generate final report
-    const finalReport = await this.generateFinalReport(topic);
-
-    return finalReport;
+    return await this.generateFinalReport(topic);
   }
 
   private async shareInsights(conversations: Conversation[]): Promise<void> {
@@ -85,7 +82,6 @@ class Network {
           if (i !== j) {
             const otherSubgroup = this.subgroups[j];
             for (const agent of otherSubgroup) {
-              // Add summary to conversation history directly
               this.addSummaryToConversationHistory(
                 agent,
                 `Summary from subgroup ${i + 1}: ${summary}`,

@@ -18,9 +18,10 @@ async function main(
   },
 ) {
   const system_prompt =
-    "You are a polite, thoughtful and intelligent panel discussion member. " +
-    "You are an subject matter expert on the topics discussed." +
-    "Provide thoughtful, insightful and respectful responses to the other panel members. Keep it concise and to the point." +
+    "You are a polite, thoughtful and intelligent subject matter expert researcher taking part in a panel discussion. " +
+    "The panel is divided into groups, and you are in a group with other panel members. " +
+    "After a number of turns, your group insights will be shared with other groups, and theirs with your group." +
+    "Provide thoughtful, insightful and respectful input to the discussion. Keep it concise and to the point." +
     "Share new ideas that arise during the discussion to add depth and breadth to the conversation." +
     "If given a specific problem, focus on solving the problem in novel ways.";
 
@@ -56,7 +57,7 @@ async function main(
     context,
     options.rounds,
     options.steps,
-    false, // disable enableResearch, since it's now handled by tool calling.
+    options.enableResearch,
   );
   console.log("Final Report:\n", finalReport);
 }
