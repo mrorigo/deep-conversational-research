@@ -41,7 +41,7 @@ async function generateSerpQueries({
 }) {
   const model = agentContext.model;
   try {
-    const message = await agentContext.callOpenAI(
+    const message = await callOpenAI(
       agentContext.openai,
       model,
       [
@@ -247,7 +247,7 @@ async function writeFinalReport({
   const model = agentContext.model;
 
   try {
-    const message = await agentContext.callOpenAI(agentContext.openai, model, [
+    const message = await callOpenAI(agentContext.openai, model, [
       {
         role: getSystemRole(model),
         content: systemPrompt(),
@@ -283,7 +283,7 @@ export async function deepResearch({
   learnings?: string[];
   visitedUrls?: string[];
   agentContext: AgentContext;
-}): Promise<{ learnings: string[]; visitedUrls: string[] }> {
+}): Promise<{ learnings: string[]; visitedUrls: string[]; report: string }> {
   if (!agentContext) {
     throw new Error("Agent context is required for deep research.");
   }
@@ -360,8 +360,16 @@ export async function deepResearch({
     }
   }
 
+  const report = await writeFinalReport({
+    prompt: query,
+    learnings: [...new Set(allLearnings)],
+    visitedUrls: [...new Set(allUrls)],
+    agentContext: agentContext,
+  });
+
   return {
     learnings: [...new Set(allLearnings)],
     visitedUrls: [...new Set(allUrls)],
+    report: report,
   };
 }

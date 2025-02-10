@@ -3,6 +3,7 @@ import Conversation from "./Conversation";
 import OpenAI from "openai";
 import { callOpenAI, getSystemRole } from "./utils";
 import getLogger from "./logger";
+import { deepResearch } from "./research/deepResearch";
 
 class Network {
   private subgroups: Agent[][] = [];
@@ -28,7 +29,7 @@ class Network {
     numRounds: number = 3,
     maxSteps: number = 5,
     enableResearch: boolean = false,
-  ): Promise<string> {
+  ): Promise<string[]> {
     if (this.subgroups.length === 0) {
       throw new Error("No subgroups created. Please create subgroups first.");
     }
@@ -135,7 +136,9 @@ class Network {
     }
   }
 
-  private async generateFinalReport(topic: string): Promise<string> {
+  private async generateFinalReport(topic: string): Promise<string[]> {
+    console.log("Generating final report...");
+
     console.log("Generating final report...");
 
     try {
@@ -144,15 +147,16 @@ class Network {
         topic,
       );
       const report = message?.content;
+      console.log("Final Report:\n", report);
 
       const revisedReport = await this.reviseFinalReport(report);
 
       console.log("Final Report:\n", report);
       console.log("Revised Report:\n", revisedReport);
-      return report;
+      return [report, revisedReport];
     } catch (error) {
       console.error("Error generating final report:", error);
-      return "Error generating final report.";
+      return ["Error generating final report."];
     }
   }
 
