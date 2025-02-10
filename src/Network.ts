@@ -139,8 +139,6 @@ class Network {
   private async generateFinalReport(topic: string): Promise<string[]> {
     console.log("Generating final report...");
 
-    console.log("Generating final report...");
-
     try {
       const message = await this.summarizeSharedInsights(
         this.sharedInsights.join("\n"),
@@ -150,9 +148,6 @@ class Network {
       console.log("Final Report:\n", report);
 
       const revisedReport = await this.reviseFinalReport(report);
-
-      console.log("Final Report:\n", report);
-      console.log("Revised Report:\n", revisedReport);
       return [report, revisedReport];
     } catch (error) {
       console.error("Error generating final report:", error);

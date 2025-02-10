@@ -64,7 +64,8 @@ async function main(
     options.steps,
     options.enableResearch,
   );
-  console.log("Final Report:\n", finalReport);
+  getLogger().log("FinalReports", finalReport);
+  console.log("Final Reports\n", finalReport[0], finalReport[1]);
 }
 
 function printHelp() {

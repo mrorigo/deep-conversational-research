@@ -11,7 +11,7 @@ async function callOpenAI(
   model: string,
   messages: ChatCompletionMessageParam[],
   options?: any,
-  retries: number = 3,
+  retries: number = 5,
 ): Promise<any> {
   const req = {
     model: model,

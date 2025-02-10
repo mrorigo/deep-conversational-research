@@ -8,7 +8,8 @@ export type EventType =
   | "ResearchEvent"
   | "RoundStarted"
   | "StepStarted"
-  | "RoundEnded";
+  | "RoundEnded"
+  | "FinalReports";
 
 class Logger {
   private logFile: string;
