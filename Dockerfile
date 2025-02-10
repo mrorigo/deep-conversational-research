@@ -19,6 +19,9 @@ RUN npm install -g typescript && tsc
 # Use a Node.js base image
 FROM node:20-alpine
 
+# Update the package list and install bash
+RUN apk update && apk add bash
+
 # Set the working directory
 WORKDIR /app
 

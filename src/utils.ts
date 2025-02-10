@@ -1,6 +1,11 @@
 import OpenAI from "openai";
 import { ChatCompletionMessageParam } from "openai/resources/chat";
 
+// Handle system prompt based on the model (o-models don't accept system role)
+const getSystemRole = (model: string): "user" | "system" => {
+  return model.startsWith("o") ? "user" : "system";
+};
+
 async function callOpenAI(
   openai: OpenAI,
   model: string,
@@ -36,4 +41,4 @@ async function callOpenAI(
   }
 }
 
-export { callOpenAI };
+export { callOpenAI, getSystemRole };

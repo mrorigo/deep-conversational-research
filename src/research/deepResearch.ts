@@ -1,6 +1,7 @@
 import OpenAI from "openai";
 import * as dotenv from "dotenv";
 import DuckDuckGoSearch from "./ddgs"; // Import DuckDuckGoSearch
+import { getSystemRole } from "../utils";
 
 dotenv.config();
 
@@ -55,7 +56,10 @@ async function generateSerpQueries({
       agentContext.openai,
       model,
       [
-        { role: "system", content: systemPrompt() },
+        {
+          role: getSystemRole(model),
+          content: systemPrompt(),
+        },
         {
           role: "user",
           content:
@@ -167,7 +171,7 @@ async function processSerpResult({
   agentContext,
 }: {
   query: string;
-  results: any[]; // Update type to any[] since the structure will change
+  results: any[];
   numLearnings?: number;
   numFollowUpQuestions?: number;
   agentContext: AgentContext;
@@ -176,19 +180,24 @@ async function processSerpResult({
 
   const contents = [];
   for (const result of results) {
-    const content = await scrapeContent(result.href); // Changed to result.href
+    const content = await scrapeContent(result.href);
     if (content) {
       contents.push(content);
     }
   }
-  console.log(`Ran ${query}, found ${contents.length} contents`);
+  console.log(
+    `deepResearch: Ran query "${query}", found ${contents.length} contents`,
+  );
 
   try {
     const message = await agentContext.callOpenAI(
       agentContext.openai,
       model,
       [
-        { role: "system", content: systemPrompt() },
+        {
+          role: getSystemRole(model),
+          content: systemPrompt(),
+        },
         {
           role: "user",
           content:
@@ -250,7 +259,10 @@ async function writeFinalReport({
 
   try {
     const message = await agentContext.callOpenAI(agentContext.openai, model, [
-      { role: "system", content: systemPrompt() },
+      {
+        role: getSystemRole(model),
+        content: systemPrompt(),
+      },
       {
         role: "user",
         content: `Given the following prompt from the user, write a final report on the topic using the learnings from research. Make it as as detailed as possible, aim for 3 or more pages, include ALL the learnings from research:\n\n<prompt>${prompt}</prompt>\n\nHere are all the learnings from previous research:\n\n<learnings>\n${learnings.map((learning) => `<learning>\n${learning}\n</learning>`).join("\n")}\n</learnings>`,

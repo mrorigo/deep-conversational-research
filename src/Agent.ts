@@ -2,7 +2,7 @@ import OpenAI from "openai";
 import * as dotenv from "dotenv";
 import { ChatCompletionMessageParam } from "openai/resources/chat";
 import { deepResearch } from "./research/deepResearch";
-import { callOpenAI } from "./utils";
+import { callOpenAI, getSystemRole } from "./utils";
 
 dotenv.config();
 
@@ -85,12 +85,23 @@ class Agent {
       tool_choice = { type: "function", function: { name: "deepResearch" } };
     }
 
+    console.log(
+      `${this.id}: Generating response. Force research: ${forceResearch}`,
+    );
+
     try {
       const message = await callOpenAI(
         this.openai as OpenAI,
         this.model,
         [
-          { role: "system", content: this.system_prompt },
+          {
+            role: getSystemRole(this.model),
+            content:
+              this.system_prompt +
+              (forceResearch
+                ? "\nYou MUST use the deepResearch tool this turn!"
+                : ""),
+          },
           ...this.conversationHistory,
         ],
         {

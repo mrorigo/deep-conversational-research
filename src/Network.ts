@@ -1,7 +1,7 @@
 import Agent from "./Agent";
 import Conversation from "./Conversation";
 import OpenAI from "openai";
-import { callOpenAI } from "./utils";
+import { callOpenAI, getSystemRole } from "./utils";
 
 class Network {
   private subgroups: Agent[][] = [];
@@ -39,9 +39,7 @@ class Network {
     // Initial round of conversations
     console.log(`== Starting initial round of discussions...`);
     await Promise.all(
-      conversations.map((conversation) =>
-        conversation.startRound(1, [], maxSteps),
-      ),
+      conversations.map((conversation) => conversation.startRound(1, maxSteps)),
     );
 
     for (let round = 1; round < numRounds; round++) {
@@ -52,7 +50,7 @@ class Network {
       // Start new rounds of discussions based on shared insights
       await Promise.all(
         conversations.map((conversation) =>
-          conversation.startRound(round + 1, this.sharedInsights, maxSteps),
+          conversation.startRound(round + 1, maxSteps),
         ),
       );
     }
@@ -114,7 +112,7 @@ class Network {
     try {
       const message = await callOpenAI(this.openai, this.summary_model, [
         {
-          role: this.getSystemRole(),
+          role: getSystemRole(this.summary_model),
           content:
             "You are an expert summarizer tasked with distilling the key insights and arguments from a conversation. " +
             "Analyze the following dialogue and provide a concise summary, focusing on identifying the main topics discussed, " +
@@ -139,7 +137,11 @@ class Network {
         topic,
       );
       const report = message?.content;
+
+      const revisedReport = await this.reviseFinalReport(report);
+
       console.log("Final Report:\n", report);
+      console.log("Revised Report:\n", revisedReport);
       return report;
     } catch (error) {
       console.error("Error generating final report:", error);
@@ -147,9 +149,24 @@ class Network {
     }
   }
 
-  // Handle system prompt based on the model (o-models don't accept system role)
-  private getSystemRole(): "user" | "system" {
-    return this.summary_model.startsWith("o") ? "user" : "system";
+  private async reviseFinalReport(report: string): Promise<string> {
+    try {
+      const message = await callOpenAI(this.openai, this.summary_model, [
+        {
+          role: getSystemRole(this.summary_model),
+          content:
+            "You are an AI research assistant tasked with revising a research report. " +
+            "Based on the following report, make any necessary revisions to improve clarity, coherence, and overall quality." +
+            "Respond exclusively with the revised report.",
+        },
+        { role: "user", content: report },
+      ]);
+
+      return message?.content;
+    } catch (error) {
+      console.error("Error revising final report:", error);
+      return "Error revising final report.";
+    }
   }
 
   private async summarizeSharedInsights(
@@ -159,10 +176,10 @@ class Network {
     try {
       const message = await callOpenAI(this.openai, this.summary_model, [
         {
-          role: this.getSystemRole(),
+          role: getSystemRole(this.summary_model),
           content:
-            `You are an AI research assistant tasked with generating a final report on the topic of "${topic}".  ` +
-            `Based on the following shared insights from multiple AI agents, create a detailed research report covering key ` +
+            `You are an AI research assistant tasked with generating a comprehensive final report on the topic of "${topic}".  ` +
+            `Based on the following shared insights from multiple discussions, create a detailed research report covering key ` +
             `findings, conclusions, and any remaining open questions:`,
         },
         { role: "user", content: sharedInsights },

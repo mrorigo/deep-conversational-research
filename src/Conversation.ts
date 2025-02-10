@@ -11,7 +11,6 @@ class Conversation {
 
   public async startRound(
     roundNumber: number,
-    sharedInsights: string[],
     maxSteps: number = 5,
   ): Promise<void> {
     console.log(
@@ -27,13 +26,6 @@ class Conversation {
 
       // Force research on the first turn of each round
       const forceResearch = i === 0 && this.enableResearch;
-
-      if (sharedInsights.length > 0) {
-        const insightPrompt = `Here are some insights from other subgroups: ${sharedInsights.join(
-          "\n",
-        )}.  Consider these insights and generate follow up questions.`;
-        currentPrompt += `\n${insightPrompt}`;
-      }
 
       const response = await currentAgent.generateResponse(
         currentPrompt,
