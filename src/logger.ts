@@ -1,4 +1,4 @@
-import fs from "fs";
+import { EventEmitter } from "events";
 
 export type EventType =
   | "ConversationStarted"
@@ -10,11 +10,10 @@ export type EventType =
   | "RoundEnded"
   | "FinalReports";
 
-class Logger {
-  private logFile: string;
-
-  constructor(logFileName: string = "conversation.log") {
-    this.logFile = logFileName;
+class Logger extends EventEmitter {
+  constructor(private logFileName?: string) {
+    // logFileName is now optional
+    super();
   }
 
   public log(event: EventType, details: Record<string, any> = {}): void {
@@ -24,7 +23,7 @@ class Logger {
       event,
       ...details,
     };
-    fs.appendFileSync(this.logFile, JSON.stringify(logEntry) + "\n");
+    this.emit("log", logEntry); // Emit the 'log' event
   }
 }
 

@@ -3,6 +3,7 @@ import Network from "./Network";
 import { readFileSync } from "fs";
 import OpenAI from "openai";
 import getLogger from "./logger";
+import { open } from "fs/promises";
 
 async function main(
   context: string,
@@ -212,12 +213,17 @@ function getContext(options: { text: string; file: string }) {
   }
 }
 
-function runMain() {
+async function runMain() {
   const options = parseArgs();
-  getLogger(options.logFile);
+  const logger = getLogger();
+  const logFd = await open(options.logFile, "a");
+  logger.on("log", (log) => {
+    logFd.write(JSON.stringify(log) + "\n");
+  });
   const context = getContext(options);
 
   main(context, options);
+  logFd.close();
 }
 
 runMain();
