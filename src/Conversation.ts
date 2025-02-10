@@ -1,17 +1,13 @@
 import Agent from "./Agent";
 
 class Conversation {
-  private agents: Agent[];
-  private topic: string;
-  private conversationHistory: string[];
-  private enableResearch: boolean;
+  private conversationHistory: string[] = [];
 
-  constructor(agents: Agent[], topic: string, enableResearch: boolean = false) {
-    this.agents = agents;
-    this.topic = topic;
-    this.conversationHistory = [];
-    this.enableResearch = enableResearch;
-  }
+  constructor(
+    private agents: Agent[],
+    private topic: string,
+    private enableResearch: boolean = false,
+  ) {}
 
   public async startRound(
     roundNumber: number,

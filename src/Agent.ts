@@ -38,39 +38,18 @@ interface AgentContext {
 }
 
 class Agent {
-  private conversationHistory: ChatCompletionMessageParam[];
-  public breadth: number;
-  public depth: number;
-  private researchModel: string;
+  private conversationHistory: ChatCompletionMessageParam[] = [];
 
   constructor(
     public id: string,
     private model: string = "gpt-4o-mini",
+    private researchModel: string,
     private system_prompt: string = defaultSystemPrompt,
     public historyLimit: number = 20,
-    breadth: number = 3,
-    depth: number = 2,
-    researchModel?: string,
-    private openai?: OpenAI,
-  ) {
-    if (!process.env.OPENAI_API_KEY) {
-      throw new Error("OPENAI_API_KEY is not set in the environment.");
-    }
-
-    this.openai =
-      openai ||
-      new OpenAI({
-        apiKey: process.env.OPENAI_API_KEY,
-        baseURL: process.env.OPENAI_API_URL || "https://api.openai.com",
-      });
-    this.conversationHistory = [];
-    this.historyLimit = historyLimit;
-    this.model = model;
-    this.id = id;
-    this.breadth = breadth;
-    this.depth = depth;
-    this.researchModel = researchModel || model;
-  }
+    public breadth: number = 3,
+    public depth: number = 2,
+    private openai: OpenAI,
+  ) {}
 
   private getResearchToolDefinition(): ToolDefinition {
     return {

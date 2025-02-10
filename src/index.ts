@@ -25,6 +25,10 @@ async function main(
     "Share new ideas that arise during the discussion to add depth and breadth to the conversation." +
     "If given a specific problem, focus on solving the problem in novel ways.";
 
+  if (!process.env.OPENAI_API_KEY) {
+    throw new Error("OPENAI_API_KEY is not set in the environment.");
+  }
+
   const openai = new OpenAI({
     apiKey: process.env.OPENAI_API_KEY,
     baseURL: process.env.OPENAI_API_URL || "https://api.openai.com",
@@ -36,11 +40,11 @@ async function main(
       new Agent(
         `Agent${i}`,
         options.models[i % options.models.length],
+        options.researchModel || options.models[0],
         system_prompt,
         20, // historyLimit
         options.researchBreadth,
         options.researchDepth,
-        options.researchModel,
         openai,
       ),
     );
