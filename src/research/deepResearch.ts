@@ -169,7 +169,10 @@ async function processSerpResult({
 
   const contents = [];
   for (const result of results) {
-    const content = await scrapeContent(result.href);
+    const content = ((await scrapeContent(result.href)) || "").substring(
+      0,
+      50000,
+    );
     if (content) {
       contents.push(content);
     }

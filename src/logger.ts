@@ -1,5 +1,4 @@
 import fs from "fs";
-import path from "path";
 
 export type EventType =
   | "ConversationStarted"
@@ -15,7 +14,7 @@ class Logger {
   private logFile: string;
 
   constructor(logFileName: string = "conversation.log") {
-    this.logFile = path.join(__dirname, logFileName);
+    this.logFile = logFileName;
   }
 
   public log(event: EventType, details: Record<string, any> = {}): void {
