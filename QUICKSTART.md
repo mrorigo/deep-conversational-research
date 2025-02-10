@@ -179,6 +179,7 @@ This project combines the concepts of Deep Research and Conversational Swarm to 
       -e RESEARCHDEPTH=2 \
       -e ROUNDS=3 \
       -e STEPS=5 \
+      -e LOGFILE="dcsr.log" \
       -e TEXT="Discuss AI" \
       deep-conversational-research_dcsr:latest
     ```

@@ -1,28 +1,45 @@
 import Agent from "./Agent";
+import getLogger from "./logger"; // Import the logger
 
 class Conversation {
   private conversationHistory: string[] = [];
 
   constructor(
+    private group: number,
     private agents: Agent[],
     private topic: string,
     private enableResearch: boolean = false,
-  ) {}
+  ) {
+    const logger = getLogger();
+    logger.log("ConversationStarted", {
+      group,
+      topic,
+      agents: agents.map((agent) => agent.id),
+    });
+  }
 
   public async startRound(
     roundNumber: number,
     maxSteps: number = 5,
   ): Promise<void> {
-    console.log(
-      `Starting round ${roundNumber} of conversation on topic: ${this.topic}`,
-    );
+    const logger = getLogger();
+    logger.log("RoundStarted", {
+      group: this.group,
+      roundNumber,
+      topic: this.topic,
+    });
 
     let currentPrompt = `Round ${roundNumber}: Let's continue discussing: ${this.topic}.`;
     let currentAgentIndex = 0;
 
     for (let i = 0; i < maxSteps; i++) {
       const currentAgent = this.agents[currentAgentIndex];
-      console.log(`Agent ${currentAgent.id}'s turn`);
+      logger.log("StepStarted", {
+        group: this.group,
+        roundNumber,
+        stepNumber: i + 1,
+        agent: currentAgent.id,
+      });
 
       // Force research on the first turn of each round
       const forceResearch = i === 0 && this.enableResearch;
@@ -33,7 +50,11 @@ class Conversation {
       );
 
       this.conversationHistory.push(`${currentAgent.id}: ${response}`);
-      console.log(`${currentAgent.id}: ${response}`);
+      logger.log("MessageSent", {
+        group: this.group,
+        agent: currentAgent.id,
+        message: response,
+      });
 
       // Prepare the next prompt based on the current response
       currentPrompt = `Agent ${currentAgent.id} said: ${response}. What are your thoughts?`;
@@ -42,7 +63,11 @@ class Conversation {
       currentAgentIndex = (currentAgentIndex + 1) % this.agents.length;
     }
 
-    console.log(`Round ${roundNumber} finished.`);
+    logger.log("RoundEnded", {
+      group: this.group,
+      roundNumber,
+      topic: this.topic,
+    });
   }
 
   public getConversationHistory(): string[] {

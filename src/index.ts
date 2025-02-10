@@ -2,6 +2,7 @@ import Agent from "./Agent";
 import Network from "./Network";
 import { readFileSync } from "fs";
 import OpenAI from "openai";
+import getLogger from "./logger";
 
 async function main(
   context: string,
@@ -83,6 +84,7 @@ function printHelp() {
       "  --researchBreadth  Set the breadth of the research (Default: 2)\n" +
       "  --researchDepth    Set the depth of the research (Default: 2)\n" +
       "  --researchModel    The model to use for research (defaults to first model in --models)\n" +
+      "  --logFile          Logfile to write logs to (Default: conversation.log)\n" +
       "  -h, --help         Display this help information",
   );
 }
@@ -97,6 +99,7 @@ function parseArgs() {
     rounds: 3,
     steps: 5,
     models: ["gpt-4o-mini"],
+    logFile: "conversation.log",
     enableResearch: false,
     researchBreadth: 2,
     researchDepth: 2,
@@ -140,6 +143,9 @@ function parseArgs() {
         break;
       case "--researchModel":
         options.researchModel = args[i + 1];
+        break;
+      case "--logFile":
+        options.logFile = args[i + 1];
         break;
       case "-h":
       case "--help":
@@ -207,6 +213,7 @@ function getContext(options: { text: string; file: string }) {
 
 function runMain() {
   const options = parseArgs();
+  getLogger(options.logFile);
   const context = getContext(options);
 
   main(context, options);

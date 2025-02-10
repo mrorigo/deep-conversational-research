@@ -1,7 +1,8 @@
-import OpenAI from "openai";
 import * as dotenv from "dotenv";
-import DuckDuckGoSearch from "./ddgs"; // Import DuckDuckGoSearch
-import { getSystemRole } from "../utils";
+import DuckDuckGoSearch from "./ddgs";
+import { callOpenAI, getSystemRole } from "../utils";
+import getLogger from "../logger";
+import { AgentContext } from "../Agent";
 
 dotenv.config();
 
@@ -9,18 +10,6 @@ interface DeepResearchParams {
   query: string;
   breadth: number;
   depth: number;
-}
-
-interface AgentContext {
-  model: string;
-  openai: OpenAI;
-  callOpenAI: (
-    openai: OpenAI,
-    model: string,
-    messages: any,
-    options?: any,
-    retries?: number,
-  ) => Promise<any>;
 }
 
 const systemPrompt = () => {
@@ -190,7 +179,7 @@ async function processSerpResult({
   );
 
   try {
-    const message = await agentContext.callOpenAI(
+    const message = await callOpenAI(
       agentContext.openai,
       model,
       [
@@ -333,6 +322,13 @@ export async function deepResearch({
 
         allLearnings = [...allLearnings, ...newLearnings.learnings];
         allUrls = [...allUrls, ...newUrls];
+        const logger = getLogger();
+
+        logger.log("ResearchEvent", {
+          query: serpQuery.query,
+          learnings: newLearnings.learnings,
+          urls: newUrls,
+        });
 
         if (depth - 1 > 0) {
           console.log(

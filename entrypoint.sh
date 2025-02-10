@@ -25,6 +25,10 @@ if [ -n "$ENABLEREASEARCH" ]; then
   CMD+=("--enableResearch")
 fi
 
+if [ -n "$LOGFILE" ]; then
+  CMD+=("--logFile" "$LOGFILE")
+fi
+
 if [ -n "$RESEARCHBREADTH" ]; then
   CMD+=("--researchBreadth" "$RESEARCHBREADTH")
 fi

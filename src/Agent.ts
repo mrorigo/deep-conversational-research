@@ -3,6 +3,7 @@ import * as dotenv from "dotenv";
 import { ChatCompletionMessageParam } from "openai/resources/chat";
 import { deepResearch } from "./research/deepResearch";
 import { callOpenAI, getSystemRole } from "./utils";
+import getLogger from "./logger";
 
 dotenv.config();
 
@@ -26,8 +27,10 @@ type ToolDefinition = {
   };
 };
 
-interface AgentContext {
+export interface AgentContext {
+  id: string;
   model: string;
+  openai: OpenAI;
   callOpenAI: (
     openai: OpenAI,
     model: string,
@@ -63,7 +66,7 @@ class Agent {
           properties: {
             query: {
               type: "string",
-              description: "The query to research.",
+              description: "The query to perform research on.",
             },
           },
           required: ["query"],
@@ -118,6 +121,8 @@ class Agent {
         for (const toolCall of toolCalls) {
           if (toolCall.function.name === "deepResearch") {
             const query = JSON.parse(toolCall.function.arguments).query;
+            const logger = getLogger();
+            logger.log("ResearchEvent", { agent: this.id, query });
             console.log(`${this.id}: Performing research on query: ${query}`);
             const researchResult = await this.performResearch(query);
             const learnings = researchResult.learnings.join("\n");
@@ -167,10 +172,10 @@ class Agent {
       breadth: this.breadth,
       depth: this.depth,
       agentContext: {
+        id: this.id,
         model: this.researchModel,
-        callOpenAI: callOpenAI,
         openai: this.openai as OpenAI,
-      },
+      } as AgentContext,
     });
   }
 }

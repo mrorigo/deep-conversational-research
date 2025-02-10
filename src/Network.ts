@@ -2,6 +2,7 @@ import Agent from "./Agent";
 import Conversation from "./Conversation";
 import OpenAI from "openai";
 import { callOpenAI, getSystemRole } from "./utils";
+import getLogger from "./logger";
 
 class Network {
   private subgroups: Agent[][] = [];
@@ -33,7 +34,7 @@ class Network {
     }
 
     const conversations: Conversation[] = this.subgroups.map(
-      (agents) => new Conversation(agents, topic, enableResearch),
+      (agents, i: number) => new Conversation(i, agents, topic, enableResearch),
     );
 
     // Initial round of conversations
@@ -74,6 +75,7 @@ class Network {
         console.log(`Summary of subgroup ${i + 1}: ${summary}`);
 
         this.sharedInsights.push(summary); // Store the shared insight
+        const logger = getLogger();
 
         // Share the summary with other subgroups (excluding the current one)
         for (let j = 0; j < this.subgroups.length; j++) {
@@ -85,6 +87,11 @@ class Network {
                 `Summary from subgroup ${i + 1}: ${summary}`,
               );
             }
+            logger.log("InsightsShared", {
+              fromGroup: j,
+              toGroup: i,
+              summary,
+            });
           }
         }
       } catch (error) {
