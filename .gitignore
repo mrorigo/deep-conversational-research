@@ -3,3 +3,7 @@ package-lock.json
 node_modules
 .env
 firecrawl-simple
+logs
+.parcel-cache
+*.log
+frontend

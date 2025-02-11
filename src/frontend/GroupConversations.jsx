@@ -1,7 +1,9 @@
-import React, { useEffect } from "react";
+import React, { useEffect, useState } from "react";
 import { marked } from "marked";
 
 function GroupConversations({ eventLog, numGroups }) {
+  const [activeGroupTab, setActiveGroupTab] = useState(0);
+
   // Create an array to store the conversation for each group
   const conversations = Array.from({ length: numGroups }, () => []);
 
@@ -28,23 +30,56 @@ function GroupConversations({ eventLog, numGroups }) {
     return { __html: marked(markdown, { sanitize: true }) };
   };
 
+  const styles = {
+    navTab: {
+      color: "#89cff0",
+      backgroundColor: "rgba(255, 255, 255, 0.05)",
+    },
+    navTabActive: {
+      color: "#fff",
+      backgroundColor: "rgba(137, 207, 240, 0.2)",
+      borderColor: "#89cff0",
+    },
+    conversationContainer: {
+      backgroundColor: "rgba(255, 255, 255, 0.05)",
+      border: "1px solid rgba(137, 207, 240, 0.3)",
+      borderRadius: "8px",
+      color: "#ecf0f1",
+    },
+  };
+
   return (
     <div>
-      {conversations.map((groupConversation, index) => (
-        <div key={index} className="mb-3">
-          <h4>Group {index + 1}</h4>
-          <div className="border p-2">
-            {groupConversation.map((message, messageIndex) => (
-              <div key={messageIndex}>
-                <strong>{message.agent}:</strong>
-                <div
-                  dangerouslySetInnerHTML={renderMarkdown(message.message)}
-                />
-              </div>
-            ))}
-          </div>
+      <ul className="nav nav-tabs">
+        {Array.from({ length: numGroups }).map((_, index) => (
+          <li className="nav-item" key={index}>
+            <a
+              className={`nav-link ${activeGroupTab === index ? "active" : ""}`}
+              href="#"
+              onClick={(e) => {
+                e.preventDefault();
+                setActiveGroupTab(index);
+              }}
+              style={
+                activeGroupTab === index ? styles.navTabActive : styles.navTab
+              }
+            >
+              Group {index + 1}
+            </a>
+          </li>
+        ))}
+      </ul>
+
+      <div className="mt-3">
+        <div className="border p-2" style={styles.conversationContainer}>
+          {conversations[activeGroupTab].map((message, messageIndex) => (
+            <div key={messageIndex}>
+              <strong>{message.agent}:</strong>
+              <div dangerouslySetInnerHTML={renderMarkdown(message.message)} />
+            </div>
+          ))}
         </div>
-      ))}
+      </div>
     </div>
   );
 }

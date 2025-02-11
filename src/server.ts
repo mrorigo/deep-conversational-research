@@ -21,20 +21,20 @@ app.get("/", (req, res) => {
     "default-src 'self'; script-src 'self' 'unsafe-inline' https://code.jquery.com https://cdn.jsdelivr.net https://stackpath.bootstrapcdn.com; script-src-elem 'self' https://code.jquery.com https://cdn.jsdelivr.net https://stackpath.bootstrapcdn.com 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://stackpath.bootstrapcdn.com; img-src 'self' data:; font-src 'self' https://stackpath.bootstrapcdn.com",
   );
 
-  res.sendFile(path.join(__dirname, "dist/frontend", "index.html"), (err) => {
+  res.sendFile(path.join(__dirname, "frontend", "index.html"), (err) => {
     if (err) {
       res.status(500).send(err);
     }
   });
 });
-app.use(express.static(path.join(__dirname, "dist/frontend")));
+app.use(express.static(path.join(__dirname, "frontend")));
 
 const server = http.createServer(app);
 const wss = new WebSocketServer({ noServer: true });
 
 async function replayLogFromFile(ws: WebSocket) {
   try {
-    const logFilePath = "conversation.log";
+    const logFilePath = path.join(__dirname, "logs", "conversation.log");
     if (!fs.existsSync(logFilePath)) {
       console.log(`Log file ${logFilePath} not found.  Skipping replay.`);
       return; // Skip replay if the log file doesn't exist.
@@ -135,7 +135,10 @@ wss.on("connection", (ws) => {
         };
 
         // Set up logging to the websocket and log file
-        logFd = await open("conversation.log", "a");
+        logFd = await open(
+          path.join(__dirname, "logs", "conversation.log"),
+          "a",
+        );
         logger.on("log", (log) => {
           const message = JSON.stringify({ type: "log", payload: log });
           try {

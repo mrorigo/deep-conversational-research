@@ -9,6 +9,7 @@ export type EventType =
   | "RoundStarted"
   | "StepStarted"
   | "RoundEnded"
+  | "AllSharedInsights"
   | "FinalReports";
 
 class Logger extends EventEmitter {

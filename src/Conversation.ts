@@ -57,7 +57,7 @@ class Conversation {
       });
 
       // Prepare the next prompt based on the current response
-      currentPrompt = `Agent ${currentAgent.id} said: ${response}. What are your thoughts?`;
+      currentPrompt = `${currentAgent.id} said: ${response}`;
 
       // Move to the next agent in a round-robin fashion
       currentAgentIndex = (currentAgentIndex + 1) % this.agents.length;
@@ -70,6 +70,7 @@ class Conversation {
     });
   }
 
+  // TODO: Tokenize and return only the max context size tokens
   public getConversationHistory(): string[] {
     return this.conversationHistory;
   }

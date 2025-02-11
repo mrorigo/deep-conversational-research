@@ -167,7 +167,7 @@ async function processSerpResult({
 }) {
   const model = agentContext.model;
 
-  const contents = [];
+  const contents: string[] = [];
   for (const result of results) {
     const content = ((await scrapeContent(result.href)) || "").substring(
       0,
@@ -225,9 +225,17 @@ async function processSerpResult({
       console.warn("Could not parse JSON response, attempting manual parse", e);
     }
 
-    const learnings = parsedResponse.split("\n").map((l: string) => l.trim());
+    const learnings = parsedResponse
+      .split("\n")
+      .map((l: string) => l.trim())
+      .filter((l: string) => l.length > 0)
+      .slice(0, numLearnings);
+    console.log(
+      `Created ${learnings.length} learnings from manual parse`,
+      learnings,
+    );
     return {
-      learnings: learnings.slice(0, numLearnings),
+      learnings,
       followUpQuestions: [],
     };
   } catch (error) {

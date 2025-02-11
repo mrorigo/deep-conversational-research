@@ -68,7 +68,6 @@ function EventLog({ eventLog, conversationStarted }) {
         ref={eventLogRef}
       >
         {filteredEventLog.map((event, index) => {
-          console.log(event, event);
           if (event.payload.type === "status" && event.payload.message) {
             return (
               <div
@@ -106,6 +105,30 @@ function EventLog({ eventLog, conversationStarted }) {
 
               {isExpanded && (
                 <div className="mt-2">
+                  {payload.event === "AllSharedInsights" && (
+                    <>
+                      <strong>Insights:</strong>
+                      <ul>
+                        {payload.insights.map((insight, i) => (
+                          <li key={i}>{insight}</li>
+                        ))}
+                      </ul>
+                    </>
+                  )}
+                  {payload.event === "InsightsShared" && (
+                    <>
+                      <p>
+                        <strong>From Group:</strong> {payload.fromGroup}
+                      </p>
+                      <p>
+                        <strong>To Group:</strong> {payload.toGroup}
+                      </p>
+                      <p>
+                        <strong>Summary:</strong> {payload.summary}
+                      </p>
+                    </>
+                  )}
+
                   {payload.event === "ResearchEvent" && (
                     <>
                       <p>

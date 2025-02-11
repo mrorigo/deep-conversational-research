@@ -46,7 +46,7 @@ class Network {
     for (let round = 1; round < numRounds; round++) {
       console.log(`== Starting round ${round} of discussions...`);
       // Share insights after conversations
-      await this.shareInsights(conversations);
+      await this.shareInsights(conversations, maxSteps);
 
       // Start new rounds of discussions based on shared insights
       await Promise.all(
@@ -56,20 +56,28 @@ class Network {
       );
     }
 
+    // Share insights once more after final round
+    await this.shareInsights(conversations, maxSteps);
+
     return await this.generateFinalReport(topic);
   }
 
-  private async shareInsights(conversations: Conversation[]): Promise<void> {
+  private async shareInsights(
+    conversations: Conversation[],
+    maxSteps: number,
+  ): Promise<void> {
     console.log("Sharing insights between subgroups...");
 
     for (let i = 0; i < conversations.length; i++) {
       const conversation = conversations[i];
-      const conversationHistory = conversation
-        .getConversationHistory()
-        .join("\n");
+      const conversationHistory = conversation.getConversationHistory();
 
       try {
-        const message = await this.summarizeConversation(conversationHistory);
+        const message = await this.summarizeConversation(
+          conversation.getTopic(),
+          conversationHistory,
+          maxSteps,
+        );
         const summary = message?.content;
 
         console.log(`Summary of subgroup ${i + 1}: ${summary}`);
@@ -114,19 +122,34 @@ class Network {
   }
 
   private async summarizeConversation(
-    conversationHistory: string,
+    topic: string,
+    conversationHistory: string[],
+    maxSteps: number,
   ): Promise<any> {
     try {
+      // Summarize the last N steps of the conversation (plus # subgroups for shared insights)
+      conversationHistory = conversationHistory.slice(
+        -Math.min(conversationHistory.length, maxSteps + this.subgroups.length),
+      );
+      console.log(
+        "Summarizing conversation:\n",
+        conversationHistory.join("\n"),
+      );
       const message = await callOpenAI(this.openai, this.summary_model, [
         {
           role: getSystemRole(this.summary_model),
           content:
-            "You are an expert summarizer tasked with distilling the key insights and arguments from a conversation. " +
-            "Analyze the following dialogue and provide a concise summary, focusing on identifying the main topics discussed, " +
-            "the key viewpoints expressed, and any areas of agreement or disagreement. Your summary should be informative and " +
-            "highlight the most important aspects of the conversation.",
+            "You are an expert summarizer tasked with distilling the key insights and arguments from a conversation between experts. " +
+            "The target audience is other groups of experts discussing similar topics. " +
+            "Analyze the following dialogue and provide a concise summary, focusing on identifying the main insights discussed, " +
+            "the key viewpoints expressed, and areas of agreement or disagreement.",
         },
-        { role: "user", content: conversationHistory },
+        {
+          role: "user",
+          content:
+            `Conversation on the topic "${topic}":\n` +
+            conversationHistory.join("\n"),
+        },
       ]);
       return message;
     } catch (error) {
@@ -137,6 +160,10 @@ class Network {
 
   private async generateFinalReport(topic: string): Promise<string[]> {
     console.log("Generating final report...");
+
+    getLogger().log("AllSharedInsights", {
+      insights: this.sharedInsights,
+    });
 
     try {
       const message = await this.summarizeSharedInsights(

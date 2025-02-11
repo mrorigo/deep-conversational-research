@@ -15,6 +15,7 @@ COPY . .
 
 # Compile the TypeScript code
 RUN npm install -g typescript && tsc
+RUN npm run build-frontend
 
 # Use a Node.js base image
 FROM node:20-alpine

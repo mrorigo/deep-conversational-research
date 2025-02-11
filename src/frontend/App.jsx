@@ -2,9 +2,10 @@ import React, { useState, useEffect } from "react";
 import ReactDOM from "react-dom/client";
 import ConversationForm from "./ConversationForm";
 import EventLog from "./EventLog";
-import Dashboard from "./Dashboard";
+import Overview from "./Overview";
 import GroupConversations from "./GroupConversations";
-import FinalReports from "./FinalReports"; // Import FinalReports
+import FinalReports from "./FinalReports";
+import Footer from "./Footer";
 
 function App() {
   const [topic, setTopic] = useState("");
@@ -19,10 +20,11 @@ function App() {
   const [eventLog, setEventLog] = useState([]);
   const [ws, setWs] = useState(null);
   const [conversationStarted, setConversationStarted] = useState(false);
-  const [activeTab, setActiveTab] = useState("dashboard"); // Default to dashboard tab
+  const [activeTab, setActiveTab] = useState("overview");
   const [finalReport, setFinalReport] = useState(null);
   const [revisedReport, setRevisedReport] = useState(null);
   const [reportsAvailable, setReportsAvailable] = useState(false);
+  const [sharedInsights, setSharedInsights] = useState([]);
 
   useEffect(() => {
     const newWs = new WebSocket("ws://localhost:3210/websocket");
@@ -57,6 +59,10 @@ function App() {
         setRevisedReport(data.payload.revisedReport);
         setReportsAvailable(true);
       }
+
+      if (data.type === "log" && data.payload.event === "AllSharedInsights") {
+        setSharedInsights(data.payload.insights);
+      }
     };
 
     newWs.onclose = () => {
@@ -76,7 +82,7 @@ function App() {
 
   return (
     <div className="container">
-      <h1>Deep Conversational Research</h1>
+      <h1 style={{ textAlign: "center" }}>Deep Conversational Research</h1>
 
       <button
         type="button"
@@ -142,11 +148,11 @@ function App() {
           <ul className="nav nav-tabs">
             <li className="nav-item">
               <a
-                className={`nav-link ${activeTab === "dashboard" ? "active" : ""}`}
+                className={`nav-link ${activeTab === "overview" ? "active" : ""}`}
                 href="#"
-                onClick={() => setActiveTab("dashboard")}
+                onClick={() => setActiveTab("overview")}
               >
-                Dashboard
+                Overview
               </a>
             </li>
             <li className="nav-item">
@@ -181,8 +187,8 @@ function App() {
           </ul>
 
           <div className="mt-3">
-            {activeTab === "dashboard" && (
-              <Dashboard
+            {activeTab === "overview" && (
+              <Overview
                 topic={topic}
                 numAgents={numAgents}
                 numGroups={numGroups}
@@ -208,11 +214,13 @@ function App() {
               <FinalReports
                 report={finalReport}
                 revisedReport={revisedReport}
+                sharedInsights={sharedInsights}
               />
             )}
           </div>
         </div>
       )}
+      <Footer />
     </div>
   );
 }
