@@ -1,5 +1,5 @@
 import Agent from "./Agent";
-import getLogger from "./logger"; // Import the logger
+import getLogger from "./logger.js"; // Import the logger
 
 class Conversation {
   private conversationHistory: string[] = [];

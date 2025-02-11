@@ -2,16 +2,32 @@ import express from "express";
 import { WebSocketServer, WebSocket } from "ws";
 import * as http from "http";
 import * as url from "url";
-import { main } from "./index";
-import getLogger from "./logger";
+import { main } from "./index.js";
+import getLogger from "./logger.js";
 import { open, readFile } from "fs/promises";
 import * as fs from "fs";
+import path from "path";
 
 const app = express();
 const port = process.env.PORT || 3210;
 
-// Serve static files from the public directory
-app.use(express.static("public"));
+// Serve static files from the dist/frontend directory
+const __dirname = path.resolve();
+
+// Add a catch-all route to serve index.html and ensure the CSP header is applied
+app.get("/", (req, res) => {
+  res.setHeader(
+    "Content-Security-Policy",
+    "default-src 'self'; script-src 'self' 'unsafe-inline' https://code.jquery.com https://cdn.jsdelivr.net https://stackpath.bootstrapcdn.com; script-src-elem 'self' https://code.jquery.com https://cdn.jsdelivr.net https://stackpath.bootstrapcdn.com 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://stackpath.bootstrapcdn.com; img-src 'self' data:; font-src 'self' https://stackpath.bootstrapcdn.com",
+  );
+
+  res.sendFile(path.join(__dirname, "dist/frontend", "index.html"), (err) => {
+    if (err) {
+      res.status(500).send(err);
+    }
+  });
+});
+app.use(express.static(path.join(__dirname, "dist/frontend")));
 
 const server = http.createServer(app);
 const wss = new WebSocketServer({ noServer: true });
@@ -26,20 +42,28 @@ async function replayLogFromFile(ws: WebSocket) {
     const logData = await readFile(logFilePath, "utf-8");
     const logLines = logData.trim().split("\n");
 
-    let startReplay = false;
+    let lastNewResearchConversationIndex = -1;
     for (let i = logLines.length - 1; i >= 0; i--) {
-      const line = logLines[i];
       try {
-        const logEntry = JSON.parse(line);
-        if (logEntry.event === "ConversationStarted") {
-          startReplay = true;
-        }
-
-        if (startReplay) {
-          ws.send(JSON.stringify({ type: "log", payload: logEntry }));
+        const logEntry = JSON.parse(logLines[i]);
+        if (logEntry.event === "NewResearchConversation") {
+          lastNewResearchConversationIndex = i;
+          break; // Stop at the last occurrence
         }
       } catch (e) {
-        console.warn(`Couldn't parse log line ${i + 1}:`, line, e);
+        console.warn(`Couldn't parse log line ${i + 1}:`, logLines[i], e);
+      }
+    }
+
+    if (lastNewResearchConversationIndex !== -1) {
+      for (let i = lastNewResearchConversationIndex; i < logLines.length; i++) {
+        const line = logLines[i];
+        try {
+          const logEntry = JSON.parse(line);
+          ws.send(JSON.stringify({ type: "log", payload: logEntry }));
+        } catch (e) {
+          console.warn(`Couldn't parse log line ${i + 1}:`, line, e);
+        }
       }
     }
 
@@ -101,7 +125,7 @@ wss.on("connection", (ws) => {
           groups: num_groups,
           rounds: rounds,
           steps: steps,
-          models: models,
+          models: models.map((x: string) => x.trim()),
           text: topic,
           file: "",
           enableResearch: enableResearch,
@@ -110,11 +134,15 @@ wss.on("connection", (ws) => {
           researchModel: models[0], // Default to first model
         };
 
-        // Set up logging to the websocket
+        // Set up logging to the websocket and log file
         logFd = await open("conversation.log", "a");
         logger.on("log", (log) => {
           const message = JSON.stringify({ type: "log", payload: log });
-          ws.send(message);
+          try {
+            ws.send(message);
+          } catch (e) {
+            console.error("Error sending log message:", e);
+          }
           if (logFd) {
             logFd.write(JSON.stringify(log) + "\n");
           }
@@ -122,25 +150,18 @@ wss.on("connection", (ws) => {
 
         // Call the main function with the extracted parameters
         main(topic, options)
-          .then((finalResults) => {
-            ws.send(
-              JSON.stringify({
-                type: "log",
-                payload: {
-                  event: "ConversationComplete",
-                  data: finalResults,
-                },
-              }),
-            );
+          .then(() => {
+            logger.emit("log", {
+              type: "status",
+              message: "Conversation completed",
+            });
           })
           .catch((error: any) => {
             console.error("Error during conversation:", error);
-            ws.send(
-              JSON.stringify({
-                type: "error",
-                message: `Conversation failed: ${error.message}`,
-              }),
-            );
+            logger.emit("log", {
+              type: "error",
+              message: `Conversation failed: ${error.message}`,
+            });
           })
           .finally(async () => {
             if (logFd) {
@@ -148,18 +169,17 @@ wss.on("connection", (ws) => {
             }
           });
       } else {
-        ws.send(
-          JSON.stringify({ type: "error", message: "Unknown message type" }),
-        );
+        logger.emit("log", {
+          type: "error",
+          message: "Unknown message type",
+        });
       }
     } catch (error: any) {
       console.error("Error processing message:", error);
-      ws.send(
-        JSON.stringify({
-          type: "error",
-          message: `Invalid message format: ${error.message}`,
-        }),
-      );
+      logger.emit("log", {
+        type: "error",
+        message: `Invalid message format: ${error.message}`,
+      });
     }
   });
 

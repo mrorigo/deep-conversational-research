@@ -1,7 +1,7 @@
-import Agent from "./Agent";
-import Network from "./Network";
+import Agent from "./Agent.js";
+import Network from "./Network.js";
 import OpenAI from "openai";
-import getLogger from "./logger";
+import getLogger from "./logger.js";
 
 export async function main(
   context: string,
@@ -34,6 +34,11 @@ export async function main(
     baseURL: process.env.OPENAI_API_URL || "https://api.openai.com",
   });
 
+  getLogger().log("NewResearchConversation", {
+    context,
+    options,
+  });
+
   const agents = [];
   for (let i = 0; i < options.agents; i++) {
     agents.push(
@@ -63,6 +68,9 @@ export async function main(
     options.steps,
     options.enableResearch,
   );
-  getLogger().log("FinalReports", finalReport);
+  getLogger().log("FinalReports", {
+    report: finalReport[0],
+    revisedReport: finalReport[1],
+  });
   console.log("Final Reports\n", finalReport[0], finalReport[1]);
 }

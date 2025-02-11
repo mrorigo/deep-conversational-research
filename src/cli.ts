@@ -1,7 +1,7 @@
 import { readFileSync } from "fs";
 import { open } from "fs/promises";
-import getLogger from "./logger";
-import { main } from "./index";
+import getLogger from "./logger.js";
+import { main } from "./index.js";
 
 function printHelp() {
   console.log(

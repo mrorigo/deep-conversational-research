@@ -1,9 +1,9 @@
 import OpenAI from "openai";
 import * as dotenv from "dotenv";
 import { ChatCompletionMessageParam } from "openai/resources/chat";
-import { deepResearch } from "./research/deepResearch";
-import { callOpenAI, getSystemRole } from "./utils";
-import getLogger from "./logger";
+import { deepResearch } from "./research/deepResearch.js";
+import { callOpenAI, getSystemRole } from "./utils.js";
+import getLogger from "./logger.js";
 
 dotenv.config();
 
@@ -93,20 +93,26 @@ class Agent {
     );
 
     try {
+      const messages = [
+        {
+          role: getSystemRole(this.model),
+          content:
+            "Your name is " +
+            this.id +
+            ".\n" +
+            this.system_prompt +
+            (forceResearch
+              ? "\nYou MUST use the deepResearch tool this turn!"
+              : ""),
+        },
+        ...this.conversationHistory,
+      ];
+      console.log("Messages:", messages);
+
       const message = await callOpenAI(
         this.openai as OpenAI,
         this.model,
-        [
-          {
-            role: getSystemRole(this.model),
-            content:
-              this.system_prompt +
-              (forceResearch
-                ? "\nYou MUST use the deepResearch tool this turn!"
-                : ""),
-          },
-          ...this.conversationHistory,
-        ],
+        messages,
         {
           tools: tools,
           tool_choice: tool_choice,
@@ -114,7 +120,7 @@ class Agent {
         },
       );
 
-      const parsedResponse = message?.content || "No response";
+      let parsedResponse = message?.content || "No response";
       const toolCalls = message?.tool_calls;
 
       if (toolCalls) {
@@ -127,9 +133,10 @@ class Agent {
             const researchResult = await this.performResearch(query);
             const learnings = researchResult.learnings.join("\n");
 
+            parsedResponse = `Researched topic: "${query}", and found the following learnings:\n${learnings}`;
             this.conversationHistory.push({
               role: "user",
-              content: `Researched topic: "${query}", and found the following learnings:\n${learnings}`,
+              content: parsedResponse,
             });
           } else {
             console.error("Unknown tool call:", toolCall);

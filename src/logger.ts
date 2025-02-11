@@ -1,6 +1,7 @@
 import { EventEmitter } from "events";
 
 export type EventType =
+  | "NewResearchConversation"
   | "ConversationStarted"
   | "MessageSent"
   | "InsightsShared"

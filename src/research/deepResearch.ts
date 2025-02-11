@@ -1,8 +1,8 @@
 import * as dotenv from "dotenv";
-import DuckDuckGoSearch from "./ddgs";
-import { callOpenAI, getSystemRole } from "../utils";
-import getLogger from "../logger";
-import { AgentContext } from "../Agent";
+import DuckDuckGoSearch from "./ddgs.js";
+import { callOpenAI, getSystemRole } from "../utils.js";
+import getLogger from "../logger.js";
+import { AgentContext } from "../Agent.js";
 
 dotenv.config();
 

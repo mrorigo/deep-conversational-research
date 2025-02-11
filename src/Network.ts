@@ -1,9 +1,8 @@
-import Agent from "./Agent";
-import Conversation from "./Conversation";
+import Agent from "./Agent.js";
+import Conversation from "./Conversation.js";
 import OpenAI from "openai";
-import { callOpenAI, getSystemRole } from "./utils";
-import getLogger from "./logger";
-import { deepResearch } from "./research/deepResearch";
+import { callOpenAI, getSystemRole } from "./utils.js";
+import getLogger from "./logger.js";
 
 class Network {
   private subgroups: Agent[][] = [];
