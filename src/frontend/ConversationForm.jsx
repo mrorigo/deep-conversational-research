@@ -1,5 +1,15 @@
 import React, { useState, useRef } from "react";
 
+// Function to generate a unique conversation ID from the topic
+function generateConversationId(topic) {
+  let hash = 0;
+  for (let i = 0; i < topic.length; i++) {
+    const char = topic.charCodeAt(i);
+    hash = (hash << 5) - hash + char;
+  }
+  return btoa(topic).substring(0, 12) + "-" + Math.abs(hash).toString(16);
+}
+
 function ConversationForm({
   onSubmit,
   topic,
@@ -71,6 +81,9 @@ function ConversationForm({
   const handleSubmit = (event) => {
     event.preventDefault();
     if (validateForm()) {
+      // Generate conversation ID
+      const conversationId = generateConversationId(topic);
+
       onSubmit({
         topic: topic,
         num_groups: parseInt(numGroups),
@@ -81,6 +94,7 @@ function ConversationForm({
         models: models.split(","),
         rounds: parseInt(rounds),
         steps: parseInt(steps),
+        conversationId: conversationId,
       });
 
       // Close the modal

@@ -18,7 +18,7 @@ const __dirname = path.resolve();
 app.get("/", (req, res) => {
   res.setHeader(
     "Content-Security-Policy",
-    "default-src 'self'; script-src 'self' 'unsafe-inline' https://code.jquery.com https://cdn.jsdelivr.net https://stackpath.bootstrapcdn.com; script-src-elem 'self' https://code.jquery.com https://cdn.jsdelivr.net https://stackpath.bootstrapcdn.com 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://stackpath.bootstrapcdn.com; img-src 'self' data:; font-src 'self' https://stackpath.bootstrapcdn.com",
+    "default-src 'self'; script-src 'self' 'unsafe-inline' https://code.jquery.com https://cdn.jsdelivr.net https://stackpath.bootstrapcdn.com; script-src-elem 'self' https://code.jquery.com https://cdn.jsdelivr.net https://stackpath.bootstrapcdn.com 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://stackpath.bootstrapcdn.com https://fonts.googleapis.com/; img-src 'self' data:; font-src 'self' https://stackpath.bootstrapcdn.com https://fonts.googleapis.com/",
   );
 
   res.sendFile(path.join(__dirname, "frontend", "index.html"), (err) => {
@@ -32,11 +32,18 @@ app.use(express.static(path.join(__dirname, "frontend")));
 const server = http.createServer(app);
 const wss = new WebSocketServer({ noServer: true });
 
-async function replayLogFromFile(ws: WebSocket) {
+// Store active conversations with their IDs and WebSocket connections
+const activeConversations: Map<string, WebSocket> = new Map();
+
+async function replayLogFromFile(ws: WebSocket, conversationId: string) {
   try {
-    const logFilePath = path.join(__dirname, "logs", "conversation.log");
+    const logFilePath = path.join(
+      __dirname,
+      "logs",
+      `conversation-${conversationId}.log`,
+    );
     if (!fs.existsSync(logFilePath)) {
-      console.log(`Log file ${logFilePath} not found.  Skipping replay.`);
+      console.log(`Log file ${logFilePath} not found. Skipping replay.`);
       return; // Skip replay if the log file doesn't exist.
     }
     const logData = await readFile(logFilePath, "utf-8");
@@ -77,8 +84,7 @@ async function replayLogFromFile(ws: WebSocket) {
 wss.on("connection", (ws) => {
   console.log("WebSocket connection established");
 
-  // Replay log events
-  replayLogFromFile(ws);
+  let conversationId: string | null = null; // Store the conversation ID for this connection
 
   const logger = getLogger();
   let logFd: fs.promises.FileHandle | null = null;
@@ -98,6 +104,7 @@ wss.on("connection", (ws) => {
           models,
           rounds,
           steps,
+          conversationId: receivedConversationId, // Extract conversationId from message
         } = data.payload;
 
         console.log("Received start message:", data.payload);
@@ -109,7 +116,8 @@ wss.on("connection", (ws) => {
           !num_agents ||
           !models ||
           !rounds ||
-          !steps
+          !steps ||
+          !receivedConversationId
         ) {
           ws.send(
             JSON.stringify({
@@ -119,6 +127,8 @@ wss.on("connection", (ws) => {
           );
           return;
         }
+
+        conversationId = receivedConversationId; // Assign the received conversationId
 
         const options = {
           agents: num_agents,
@@ -135,10 +145,13 @@ wss.on("connection", (ws) => {
         };
 
         // Set up logging to the websocket and log file
-        logFd = await open(
-          path.join(__dirname, "logs", "conversation.log"),
-          "a",
+        const logFilePath = path.join(
+          __dirname,
+          "logs",
+          `conversation-${conversationId}.log`,
         );
+        logFd = await open(logFilePath, "a");
+
         logger.on("log", (log) => {
           const message = JSON.stringify({ type: "log", payload: log });
           try {
@@ -150,6 +163,9 @@ wss.on("connection", (ws) => {
             logFd.write(JSON.stringify(log) + "\n");
           }
         });
+
+        // Store the active conversation
+        activeConversations.set(conversationId as string, ws);
 
         // Call the main function with the extracted parameters
         main(topic, options)
@@ -170,7 +186,20 @@ wss.on("connection", (ws) => {
             if (logFd) {
               await logFd.close();
             }
+            activeConversations.delete(conversationId!);
           });
+      } else if (data.type === "replay") {
+        const replayConversationId = data.payload.conversationId;
+        if (!replayConversationId) {
+          ws.send(
+            JSON.stringify({
+              type: "error",
+              message: "Missing conversationId in replay message",
+            }),
+          );
+          return;
+        }
+        replayLogFromFile(ws, replayConversationId);
       } else {
         logger.emit("log", {
           type: "error",
@@ -190,11 +219,22 @@ wss.on("connection", (ws) => {
     console.log("WebSocket connection closed");
     // remove all listeners
     logger.removeAllListeners("log");
+    if (conversationId) {
+      activeConversations.delete(conversationId);
+    }
   });
 
   ws.on("error", (error) => {
     console.error("WebSocket error:", error);
+    if (conversationId) {
+      activeConversations.delete(conversationId);
+    }
   });
+
+  // Send existing logs on connection
+  if (conversationId) {
+    replayLogFromFile(ws, conversationId);
+  }
 });
 
 server.on("upgrade", (request: any, socket, head) => {
@@ -206,6 +246,32 @@ server.on("upgrade", (request: any, socket, head) => {
     });
   } else {
     socket.destroy();
+  }
+});
+
+// Endpoint to list available topics and their conversation IDs
+app.get("/api/topics", async (req, res) => {
+  try {
+    const logDir = path.join(__dirname, "logs");
+    const files = await fs.promises.readdir(logDir);
+    const topics = files
+      .filter(
+        (file) => file.startsWith("conversation-") && file.endsWith(".log"),
+      )
+      .map((file) => {
+        const conversationId = file
+          .replace("conversation-", "")
+          .replace(".log", "");
+        const topic = Buffer.from(
+          conversationId.split("-")[0],
+          "base64",
+        ).toString("ascii");
+        return { id: conversationId, topic: topic };
+      });
+    res.json(topics);
+  } catch (error) {
+    console.error("Error reading log directory:", error);
+    res.status(500).json({ error: "Failed to read log directory" });
   }
 });
 
