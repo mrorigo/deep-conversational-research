@@ -333,9 +333,8 @@ export async function deepResearch({
 
         allLearnings = [...allLearnings, ...newLearnings.learnings];
         allUrls = [...allUrls, ...newUrls];
-        const logger = getLogger();
 
-        logger.log("ResearchEvent", {
+        agentContext.logger.log("ResearchEvent", {
           query: serpQuery.query,
           learnings: newLearnings.learnings,
           urls: newUrls,

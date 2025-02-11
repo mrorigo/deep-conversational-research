@@ -1,0 +1,14 @@
+node_modules
+dist
+build
+.git
+.env
+npm-debug.log
+yarn-debug.log
+yarn-error.log
+.vscode
+.idea
+*.swp
+*.log
+tmp
+logs

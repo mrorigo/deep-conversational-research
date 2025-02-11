@@ -6,6 +6,7 @@ import Overview from "./Overview";
 import GroupConversations from "./GroupConversations";
 import FinalReports from "./FinalReports";
 import Footer from "./Footer";
+import Splash from "./Splash";
 
 function App() {
   const [topic, setTopic] = useState("");
@@ -44,16 +45,15 @@ function App() {
       if (data.type === "log") {
         if (data.payload.event === "NewResearchConversation") {
           setConversationStarted(true);
-          const { options } = data.payload;
-          setTopic(options.text);
-          setNumGroups(options.groups);
-          setNumAgents(options.agents);
-          setEnableResearch(options.enableResearch);
-          setResearchDepth(options.researchDepth);
-          setResearchBreadth(options.researchBreadth);
-          setModels(options.models.join(", "));
-          setRounds(options.rounds);
-          setSteps(options.steps);
+          setNumAgents(data.payload.options.agents);
+          setNumGroups(data.payload.options.groups);
+          setEnableResearch(data.payload.options.enableResearch);
+          setResearchDepth(data.payload.options.researchDepth);
+          setResearchBreadth(data.payload.options.researchBreadth);
+          setModels(data.payload.options.models.join(", "));
+          setRounds(data.payload.options.rounds);
+          setSteps(data.payload.options.steps);
+          setTopic(data.payload.options.text);
         } else if (data.payload.event === "FinalReports") {
           setFinalReport(data.payload.report);
           setRevisedReport(data.payload.revisedReport);
@@ -80,6 +80,16 @@ function App() {
   const handleFormSubmit = (payload) => {
     setErrorMessage("");
     ws.send(JSON.stringify({ type: "start", payload: payload }));
+    setTopic(payload.topic);
+    setNumGroups(payload.num_groups);
+    setNumAgents(payload.num_agents);
+    setEnableResearch(payload.enableResearch);
+    setResearchDepth(payload.researchDepth);
+    setResearchBreadth(payload.researchBreadth);
+    setModels(payload.models.join(", "));
+    setRounds(payload.rounds);
+    setSteps(payload.steps);
+    setConversationStarted(true);
   };
 
   const fetchAvailableTopics = async () => {
@@ -96,107 +106,50 @@ function App() {
     }
   };
 
-  const handleReplayTopic = () => {
+  const handleReplayTopic = (topicId) => {
+    console.log("Replaying topic:", topicId);
     setErrorMessage("");
-    if (selectedTopicId && ws) {
+    if (topicId && ws) {
       ws.send(
         JSON.stringify({
           type: "replay",
-          payload: { conversationId: selectedTopicId },
+          payload: { conversationId: topicId },
         }),
       );
+      setConversationStarted(true);
     }
+  };
+
+  const handleCloseConversation = () => {
+    setTopic("");
+    setNumGroups(0);
+    setNumAgents(0);
+    setEnableResearch(false);
+    setResearchDepth(0);
+    setResearchBreadth(0);
+    setModels("");
+    setRounds(0);
+    setSteps(0);
+    setEventLog([]);
+    setConversationStarted(false);
+    setActiveTab("overview");
+    setFinalReport(null);
+    setRevisedReport(null);
+    setReportsAvailable(false);
+    setSharedInsights([]);
   };
 
   return (
     <div className="container">
       <h1 style={{ textAlign: "center" }}>Deep Conversational Research</h1>
 
-      <div style={{ display: "flex", alignItems: "center" }}>
-        <button
-          type="button"
-          className="btn btn-primary"
-          data-toggle="modal"
-          data-target="#conversationModal"
-          style={{ marginRight: "10px" }}
-        >
-          Start New Swarm Conversation Research
-        </button>
-
-        <div>
-          <label htmlFor="topicSelect">Select a topic to replay:</label>
-          <select
-            id="topicSelect"
-            value={selectedTopicId}
-            onChange={(e) => setSelectedTopicId(e.target.value)}
-          >
-            <option value="">-- Select a topic --</option>
-            {availableTopics.map((topic) => (
-              <option key={topic.id} value={topic.id}>
-                {topic.topic} ({topic.id})
-              </option>
-            ))}
-          </select>
-          <button onClick={handleReplayTopic} disabled={!selectedTopicId}>
-            Replay Topic
-          </button>
-        </div>
-      </div>
-
-      <br />
-      {errorMessage && (
-        <div style={{ color: "red" }}>Error: {errorMessage}</div>
+      {!conversationStarted && (
+        <Splash
+          availableTopics={availableTopics}
+          selectedTopicId={selectedTopicId}
+          handleReplayTopic={handleReplayTopic}
+        />
       )}
-
-      <div
-        className="modal fade"
-        id="conversationModal"
-        tabIndex="-1"
-        role="dialog"
-        aria-labelledby="conversationModalLabel"
-        aria-hidden="true"
-      >
-        <div className="modal-dialog" role="document">
-          <div className="modal-content">
-            <div className="modal-header">
-              <h5 className="modal-title" id="conversationModalLabel">
-                Start New Conversation
-              </h5>
-              <button
-                type="button"
-                className="close"
-                data-dismiss="modal"
-                aria-label="Close"
-              >
-                <span aria-hidden="true">&times;</span>
-              </button>
-            </div>
-            <div className="modal-body">
-              <ConversationForm
-                onSubmit={handleFormSubmit}
-                topic={topic}
-                setTopic={setTopic}
-                numGroups={numGroups}
-                setNumGroups={setNumGroups}
-                numAgents={numAgents}
-                setNumAgents={setNumAgents}
-                enableResearch={enableResearch}
-                setEnableResearch={setEnableResearch}
-                researchDepth={researchDepth}
-                setResearchDepth={setResearchDepth}
-                researchBreadth={researchBreadth}
-                setResearchBreadth={setResearchBreadth}
-                models={models}
-                setModels={setModels}
-                rounds={rounds}
-                setRounds={setRounds}
-                steps={steps}
-                setSteps={setSteps}
-              />
-            </div>
-          </div>
-        </div>
-      </div>
 
       {conversationStarted && (
         <div>
@@ -239,6 +192,24 @@ function App() {
                 </a>
               </li>
             )}
+            <li className="nav-item" style={{ marginLeft: "auto" }}>
+              <a
+                className="nav-link"
+                href="#"
+                onClick={handleCloseConversation}
+              >
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  width="16"
+                  height="16"
+                  fill="currentColor"
+                  className="bi bi-x"
+                  viewBox="0 0 16 16"
+                >
+                  <path d="M4.646 4.646a.5.5 0 0 1 .708 0L8 7.293l2.646-2.647a.5.5 0 0 1 .708.708L8.707 8l2.647 2.646a.5.5 0 0 1-.708.708L8 8.707l-2.646 2.647a.5.5 0 0 1-.708-.708L7.293 8 4.646 5.354a.5.5 0 0 1 0-.708z" />
+                </svg>
+              </a>
+            </li>
           </ul>
 
           <div className="mt-3">
@@ -275,7 +246,43 @@ function App() {
           </div>
         </div>
       )}
+
       <Footer />
+
+      <br />
+      {errorMessage && (
+        <div style={{ color: "red" }}>Error: {errorMessage}</div>
+      )}
+
+      <div
+        className="modal fade"
+        id="conversationModal"
+        tabIndex="-1"
+        role="dialog"
+        aria-labelledby="conversationModalLabel"
+        aria-hidden="true"
+      >
+        <div className="modal-dialog" role="document">
+          <div className="modal-content">
+            <div className="modal-header">
+              <h5 className="modal-title" id="conversationModalLabel">
+                Start New Conversation
+              </h5>
+              <button
+                type="button"
+                className="close"
+                data-dismiss="modal"
+                aria-label="Close"
+              >
+                <span aria-hidden="true">&times;</span>
+              </button>
+            </div>
+            <div className="modal-body">
+              <ConversationForm onSubmit={handleFormSubmit} />
+            </div>
+          </div>
+        </div>
+      </div>
     </div>
   );
 }

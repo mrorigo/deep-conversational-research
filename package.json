@@ -11,9 +11,6 @@
   "license": "ISC",
   "description": "",
   "dependencies": {
-    "@types/express": "^5.0.0",
-    "@types/marked": "^5.0.2",
-    "@types/ws": "^8.5.14",
     "dotenv": "^16.4.7",
     "express": "^4.21.2",
     "js-tiktoken": "^1.0.18",
@@ -22,6 +19,7 @@
     "marked": "^15.0.7",
     "openai": "^4.83.0",
     "p-limit": "^6.2.0",
+    "pg": "^8.13.2",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
     "typescript": "^5.7.3",
@@ -29,6 +27,10 @@
     "zod": "^3.24.1"
   },
   "devDependencies": {
+    "@types/express": "^5.0.0",
+    "@types/marked": "^5.0.2",
+    "@types/pg": "^8.11.11",
+    "@types/ws": "^8.5.14",
     "@types/jsdom": "^21.1.7",
     "@types/lodash-es": "^4.17.12",
     "parcel": "^2.13.3",

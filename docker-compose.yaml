@@ -1,23 +1,29 @@
 name: firecrawl
 services:
   # Deep Conversational Swarm Research
-  dcsr:
-    build: .
-    image: deep-conversational-research:latest
-    container_name: dcsr.local
-    ports:
-      - 3210:3210
-    environment:
-      - PORT=3210
-      - FIRECRAWL_URL=http://firecrawl-api:3002
-      - OPENAI_API_KEY=${OPENAI_API_KEY}
-      - OPENAI_API_URL=${OPENAI_API_URL}
-    links:
-      - firecrawl-api
-    networks:
-      - dcsr-net
-    volumes:
-      - dcsr-data:/app/logs
+  # dcsr:
+  #   build: .
+  #   image: deep-conversational-research:latest
+  #   container_name: dcsr.local
+  #   ports:
+  #     - 3210:3210
+  #   environment:
+  #     - PORT=3210
+  #     - FIRECRAWL_URL=http://firecrawl-api:3002
+  #     - OPENAI_API_KEY=${OPENAI_API_KEY}
+  #     - OPENAI_API_URL=${OPENAI_API_URL}
+  #     - POSTGRES_USER=${POSTGRES_USER:-postgres}
+  #     - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-postgres}
+  #     - POSTGRES_DB=${POSTGRES_DB:-deep_conversational_research}
+  #     - POSTGRES_HOST=${POSTGRES_HOST:-postgres}
+  #     - POSTGRES_PORT=${POSTGRES_PORT:-5432}
+  #   links:
+  #     - firecrawl-api
+  #     - postgres
+  #   networks:
+  #     - dcsr-net
+  #   volumes:
+  #     - dcsr-data:/app/logs
 
   # Firecrawl services
   playwright-service:
@@ -92,10 +98,28 @@ services:
       - dcsr-net
     command: redis-server --bind 0.0.0.0
 
+  postgres:
+    image: postgres:16-alpine
+    container_name: postgres
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
+      POSTGRES_DB: ${POSTGRES_DB:-deep_conversational_research}
+    ports:
+      - "65432:5432"
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    networks:
+      - dcsr-net
+    expose:
+      - "65432"
+
 networks:
   dcsr-net:
     driver: bridge
 
 volumes:
   dcsr-data:
+    driver: local
+  postgres-data:
     driver: local

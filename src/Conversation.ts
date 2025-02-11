@@ -1,5 +1,5 @@
 import Agent from "./Agent";
-import getLogger from "./logger.js"; // Import the logger
+import { Logger } from "./logger.js"; // Import the logger
 
 class Conversation {
   private conversationHistory: string[] = [];
@@ -9,9 +9,9 @@ class Conversation {
     private agents: Agent[],
     private topic: string,
     private enableResearch: boolean = false,
+    private logger: Logger,
   ) {
-    const logger = getLogger();
-    logger.log("ConversationStarted", {
+    this.logger.log("ConversationStarted", {
       group,
       topic,
       agents: agents.map((agent) => agent.id),
@@ -22,8 +22,7 @@ class Conversation {
     roundNumber: number,
     maxSteps: number = 5,
   ): Promise<void> {
-    const logger = getLogger();
-    logger.log("RoundStarted", {
+    this.logger.log("RoundStarted", {
       group: this.group,
       roundNumber,
       topic: this.topic,
@@ -34,7 +33,7 @@ class Conversation {
 
     for (let i = 0; i < maxSteps; i++) {
       const currentAgent = this.agents[currentAgentIndex];
-      logger.log("StepStarted", {
+      this.logger.log("StepStarted", {
         group: this.group,
         roundNumber,
         stepNumber: i + 1,
@@ -50,7 +49,7 @@ class Conversation {
       );
 
       this.conversationHistory.push(`${currentAgent.id}: ${response}`);
-      logger.log("MessageSent", {
+      this.logger.log("MessageSent", {
         group: this.group,
         agent: currentAgent.id,
         message: response,
@@ -63,7 +62,7 @@ class Conversation {
       currentAgentIndex = (currentAgentIndex + 1) % this.agents.length;
     }
 
-    logger.log("RoundEnded", {
+    this.logger.log("RoundEnded", {
       group: this.group,
       roundNumber,
       topic: this.topic,

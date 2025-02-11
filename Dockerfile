@@ -23,6 +23,9 @@ FROM node:20-alpine
 # Update the package list and install bash
 RUN apk update && apk add bash
 
+# Install postgres client
+RUN apk add --no-cache postgresql-client
+
 # Set the working directory
 WORKDIR /app
 
@@ -42,4 +45,3 @@ RUN npm install --production
 COPY entrypoint.sh /entrypoint.sh
 RUN chmod +x /entrypoint.sh
 ENTRYPOINT ["/entrypoint.sh"]
-CMD ["-h"] #Default argument (can be overridden)

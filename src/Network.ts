@@ -2,7 +2,7 @@ import Agent from "./Agent.js";
 import Conversation from "./Conversation.js";
 import OpenAI from "openai";
 import { callOpenAI, getSystemRole } from "./utils.js";
-import getLogger from "./logger.js";
+import { Logger } from "./logger.js";
 
 class Network {
   private subgroups: Agent[][] = [];
@@ -12,9 +12,8 @@ class Network {
     private agents: Agent[],
     private summary_model: string,
     private openai: OpenAI,
-  ) {
-    this.openai = openai;
-  }
+    private logger: Logger,
+  ) {}
 
   public createSubgroups(subgroupSize: number): void {
     this.subgroups = [];
@@ -34,7 +33,8 @@ class Network {
     }
 
     const conversations: Conversation[] = this.subgroups.map(
-      (agents, i: number) => new Conversation(i, agents, topic, enableResearch),
+      (agents, i: number) =>
+        new Conversation(i, agents, topic, enableResearch, this.logger),
     );
 
     // Initial round of conversations
@@ -83,7 +83,6 @@ class Network {
         console.log(`Summary of subgroup ${i + 1}: ${summary}`);
 
         this.sharedInsights.push(summary); // Store the shared insight
-        const logger = getLogger();
 
         // Share the summary with other subgroups (excluding the current one)
         for (let j = 0; j < this.subgroups.length; j++) {
@@ -95,7 +94,7 @@ class Network {
                 `Summary from subgroup ${i + 1}: ${summary}`,
               );
             }
-            logger.log("InsightsShared", {
+            this.logger.log("InsightsShared", {
               fromGroup: j,
               toGroup: i,
               summary,
@@ -161,7 +160,7 @@ class Network {
   private async generateFinalReport(topic: string): Promise<string[]> {
     console.log("Generating final report...");
 
-    getLogger().log("AllSharedInsights", {
+    this.logger.log("AllSharedInsights", {
       insights: this.sharedInsights,
     });
 

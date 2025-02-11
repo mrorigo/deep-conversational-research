@@ -10,27 +10,16 @@ function generateConversationId(topic) {
   return btoa(topic).substring(0, 12) + "-" + Math.abs(hash).toString(16);
 }
 
-function ConversationForm({
-  onSubmit,
-  topic,
-  setTopic,
-  numGroups,
-  setNumGroups,
-  numAgents,
-  setNumAgents,
-  enableResearch,
-  setEnableResearch,
-  researchDepth,
-  setResearchDepth,
-  researchBreadth,
-  setResearchBreadth,
-  models,
-  setModels,
-  rounds,
-  setRounds,
-  steps,
-  setSteps,
-}) {
+function ConversationForm({ onSubmit }) {
+  const [topic, setTopic] = useState("");
+  const [numGroups, setNumGroups] = useState(2);
+  const [numAgents, setNumAgents] = useState(4);
+  const [enableResearch, setEnableResearch] = useState(false);
+  const [researchDepth, setResearchDepth] = useState(2);
+  const [researchBreadth, setResearchBreadth] = useState(3);
+  const [models, setModels] = useState("gpt-4o-mini");
+  const [rounds, setRounds] = useState(3);
+  const [steps, setSteps] = useState(5);
   const [errors, setErrors] = useState({});
   const modalRef = useRef(null);
 
@@ -105,15 +94,16 @@ function ConversationForm({
   return (
     <form id="conversationForm" onSubmit={handleSubmit}>
       <div className="form-group">
-        <label htmlFor="topic">Topic:</label>
-        <input
-          type="text"
+        <label htmlFor="topic">Topic / Context:</label>
+        <textarea
+          rows="3"
           className="form-control"
           id="topic"
-          value={topic}
           onChange={(e) => setTopic(e.target.value)}
           required
-        />
+        >
+          {topic}
+        </textarea>
         {errors.topic && <div className="text-danger">{errors.topic}</div>}
       </div>
 
@@ -160,29 +150,33 @@ function ConversationForm({
         </label>
       </div>
 
-      <div className="form-group">
-        <label htmlFor="researchDepth">Research Depth:</label>
-        <input
-          type="number"
-          className="form-control"
-          id="researchDepth"
-          value={researchDepth}
-          onChange={(e) => setResearchDepth(e.target.value)}
-          required
-        />
-      </div>
+      {enableResearch && (
+        <>
+          <div className="form-group">
+            <label htmlFor="researchDepth">Research Depth:</label>
+            <input
+              type="number"
+              className="form-control"
+              id="researchDepth"
+              value={researchDepth}
+              onChange={(e) => setResearchDepth(e.target.value)}
+              required
+            />
+          </div>
 
-      <div className="form-group">
-        <label htmlFor="researchBreadth">Research Breadth:</label>
-        <input
-          type="number"
-          className="form-control"
-          id="researchBreadth"
-          value={researchBreadth}
-          onChange={(e) => setResearchBreadth(e.target.value)}
-          required
-        />
-      </div>
+          <div className="form-group">
+            <label htmlFor="researchBreadth">Research Breadth:</label>
+            <input
+              type="number"
+              className="form-control"
+              id="researchBreadth"
+              value={researchBreadth}
+              onChange={(e) => setResearchBreadth(e.target.value)}
+              required
+            />
+          </div>
+        </>
+      )}
 
       <div className="form-group">
         <label htmlFor="models">Models (comma-separated):</label>

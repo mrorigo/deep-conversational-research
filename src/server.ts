@@ -3,8 +3,7 @@ import { WebSocketServer, WebSocket } from "ws";
 import * as http from "http";
 import * as url from "url";
 import { main } from "./index.js";
-import getLogger from "./logger.js";
-import { open, readFile } from "fs/promises";
+import getLogger, { Logger } from "./logger.js";
 import * as fs from "fs";
 import path from "path";
 
@@ -35,48 +34,25 @@ const wss = new WebSocketServer({ noServer: true });
 // Store active conversations with their IDs and WebSocket connections
 const activeConversations: Map<string, WebSocket> = new Map();
 
-async function replayLogFromFile(ws: WebSocket, conversationId: string) {
+async function replayLogFromFile(ws: WebSocket, logger: Logger) {
   try {
-    const logFilePath = path.join(
-      __dirname,
-      "logs",
-      `conversation-${conversationId}.log`,
-    );
-    if (!fs.existsSync(logFilePath)) {
-      console.log(`Log file ${logFilePath} not found. Skipping replay.`);
-      return; // Skip replay if the log file doesn't exist.
-    }
-    const logData = await readFile(logFilePath, "utf-8");
-    const logLines = logData.trim().split("\n");
+    const logs = await logger.getLogs();
 
-    let lastNewResearchConversationIndex = -1;
-    for (let i = logLines.length - 1; i >= 0; i--) {
-      try {
-        const logEntry = JSON.parse(logLines[i]);
-        if (logEntry.event === "NewResearchConversation") {
-          lastNewResearchConversationIndex = i;
-          break; // Stop at the last occurrence
-        }
-      } catch (e) {
-        console.warn(`Couldn't parse log line ${i + 1}:`, logLines[i], e);
-      }
+    if (!logs || logs.length === 0) {
+      console.warn(`No logs found for conversation`);
+      return;
     }
 
-    if (lastNewResearchConversationIndex !== -1) {
-      for (let i = lastNewResearchConversationIndex; i < logLines.length; i++) {
-        const line = logLines[i];
-        try {
-          const logEntry = JSON.parse(line);
-          ws.send(JSON.stringify({ type: "log", payload: logEntry }));
-        } catch (e) {
-          console.warn(`Couldn't parse log line ${i + 1}:`, line, e);
-        }
-      }
+    // Replay logs to the WebSocket client
+    for (const logEntry of logs) {
+      ws.send(JSON.stringify({ type: "log", payload: logEntry.details }));
+      await new Promise((resolve) => setTimeout(resolve, 10)); // Introduce a 10ms delay
     }
 
-    console.log("Log replay complete.");
+    console.log(`Log replay of ${logs.length} entries complete.`);
   } catch (error) {
     console.error("Error replaying log:", error);
+    ws.send(JSON.stringify({ type: "error", message: "Error replaying logs" }));
   }
 }
 
@@ -86,12 +62,13 @@ wss.on("connection", (ws) => {
 
   let conversationId: string | null = null; // Store the conversation ID for this connection
 
-  const logger = getLogger();
   let logFd: fs.promises.FileHandle | null = null;
 
   ws.on("message", async (message) => {
     try {
       const data = JSON.parse(message.toString());
+
+      console.log("Received message:", data);
 
       if (data.type === "start") {
         const {
@@ -144,13 +121,7 @@ wss.on("connection", (ws) => {
           researchModel: models[0], // Default to first model
         };
 
-        // Set up logging to the websocket and log file
-        const logFilePath = path.join(
-          __dirname,
-          "logs",
-          `conversation-${conversationId}.log`,
-        );
-        logFd = await open(logFilePath, "a");
+        const logger = getLogger(receivedConversationId); // Get the logger instance here
 
         logger.on("log", (log) => {
           const message = JSON.stringify({ type: "log", payload: log });
@@ -159,37 +130,40 @@ wss.on("connection", (ws) => {
           } catch (e) {
             console.error("Error sending log message:", e);
           }
-          if (logFd) {
-            logFd.write(JSON.stringify(log) + "\n");
-          }
         });
 
         // Store the active conversation
         activeConversations.set(conversationId as string, ws);
 
         // Call the main function with the extracted parameters
-        main(topic, options)
+        main(topic, options, logger)
           .then(() => {
-            logger.emit("log", {
-              type: "status",
-              message: "Conversation completed",
-            });
+            logger.emit(
+              "log",
+              {
+                type: "status",
+                message: "Conversation completed",
+              },
+              conversationId,
+            );
           })
           .catch((error: any) => {
             console.error("Error during conversation:", error);
-            logger.emit("log", {
-              type: "error",
-              message: `Conversation failed: ${error.message}`,
-            });
+            logger.emit(
+              "log",
+              {
+                type: "error",
+                message: `Conversation failed: ${error.message}`,
+              },
+              conversationId,
+            );
           })
           .finally(async () => {
-            if (logFd) {
-              await logFd.close();
-            }
             activeConversations.delete(conversationId!);
           });
       } else if (data.type === "replay") {
         const replayConversationId = data.payload.conversationId;
+        const logger = getLogger(replayConversationId);
         if (!replayConversationId) {
           ws.send(
             JSON.stringify({
@@ -199,26 +173,22 @@ wss.on("connection", (ws) => {
           );
           return;
         }
-        replayLogFromFile(ws, replayConversationId);
+        console.log("Replaying logs for conversation:", replayConversationId);
+        replayLogFromFile(ws, logger);
       } else {
-        logger.emit("log", {
-          type: "error",
-          message: "Unknown message type",
-        });
+        console.log(
+          "Unknown message type " + data.type + " received: " + data.payload,
+        );
       }
     } catch (error: any) {
       console.error("Error processing message:", error);
-      logger.emit("log", {
-        type: "error",
-        message: `Invalid message format: ${error.message}`,
-      });
+      console.log(`Invalid message format: ${error.message}`, conversationId);
     }
   });
 
   ws.on("close", () => {
     console.log("WebSocket connection closed");
     // remove all listeners
-    logger.removeAllListeners("log");
     if (conversationId) {
       activeConversations.delete(conversationId);
     }
@@ -230,11 +200,6 @@ wss.on("connection", (ws) => {
       activeConversations.delete(conversationId);
     }
   });
-
-  // Send existing logs on connection
-  if (conversationId) {
-    replayLogFromFile(ws, conversationId);
-  }
 });
 
 server.on("upgrade", (request: any, socket, head) => {
@@ -251,29 +216,62 @@ server.on("upgrade", (request: any, socket, head) => {
 
 // Endpoint to list available topics and their conversation IDs
 app.get("/api/topics", async (req, res) => {
+  console.log("Listing available topics...");
   try {
-    const logDir = path.join(__dirname, "logs");
-    const files = await fs.promises.readdir(logDir);
-    const topics = files
-      .filter(
-        (file) => file.startsWith("conversation-") && file.endsWith(".log"),
-      )
-      .map((file) => {
-        const conversationId = file
-          .replace("conversation-", "")
-          .replace(".log", "");
-        const topic = Buffer.from(
-          conversationId.split("-")[0],
-          "base64",
-        ).toString("ascii");
-        return { id: conversationId, topic: topic };
-      });
+    const logger = getLogger("topics");
+    const conversationIds = await logger.getDistinctConversationIds();
+
+    const topics = conversationIds
+      .map((log) => {
+        const conversationId = log.conversationid;
+        if (conversationId) {
+          const topic = Buffer.from(
+            conversationId.split("-")[0],
+            "base64",
+          ).toString("ascii");
+          return { id: conversationId, topic: topic };
+        }
+        return null;
+      })
+      .filter((topic) => topic !== null);
     res.json(topics);
   } catch (error) {
     console.error("Error reading log directory:", error);
     res.status(500).json({ error: "Failed to read log directory" });
   }
 });
+
+// Handle shutdown signals
+process.on("SIGINT", shutdown);
+process.on("SIGTERM", shutdown);
+
+async function shutdown() {
+  console.log("Shutting down server...");
+
+  // Close WebSocket connections
+  wss.close(() => {
+    console.log("WebSocket server closed");
+
+    const logger = getLogger("shutdown");
+    // Close the database connection pool
+    logger.closePool().then(() => {
+      console.log("Database connection pool closed");
+      // Close the server
+      server.close(() => {
+        console.log("HTTP server closed");
+        process.exit(0);
+      });
+    });
+  });
+
+  // Forcefully close the server after a timeout
+  setTimeout(() => {
+    console.error(
+      "Could not close connections in time, forcefully shutting down",
+    );
+    process.exit(1);
+  }, 3000);
+}
 
 server.listen(port, () => {
   console.log(`Server listening on port ${port}`);

@@ -1,7 +1,7 @@
 import Agent from "./Agent.js";
 import Network from "./Network.js";
 import OpenAI from "openai";
-import getLogger from "./logger.js";
+import { Logger } from "./logger.js";
 
 export async function main(
   context: string,
@@ -16,6 +16,7 @@ export async function main(
     researchDepth: number;
     researchModel?: string;
   },
+  logger: Logger,
 ) {
   const system_prompt =
     "You are a polite, thoughtful and intelligent subject matter expert researcher taking part in a panel discussion. " +
@@ -34,12 +35,12 @@ export async function main(
     baseURL: process.env.OPENAI_API_URL || "https://api.openai.com",
   });
 
-  getLogger().log("NewResearchConversation", {
+  logger.log("NewResearchConversation", {
     context,
     options,
   });
 
-  const agents = [];
+  const agents: Agent[] = [];
   for (let i = 0; i < options.agents; i++) {
     agents.push(
       new Agent(
@@ -51,12 +52,13 @@ export async function main(
         options.researchBreadth,
         options.researchDepth,
         openai,
+        logger,
       ),
     );
   }
 
   // Create a network, use the first model as the summary model
-  const network = new Network(agents, options.models[0], openai);
+  const network = new Network(agents, options.models[0], openai, logger);
 
   // Create subgroups
   network.createSubgroups(options.groups);
@@ -68,7 +70,7 @@ export async function main(
     options.steps,
     options.enableResearch,
   );
-  getLogger().log("FinalReports", {
+  logger.log("FinalReports", {
     report: finalReport[0],
     revisedReport: finalReport[1],
   });

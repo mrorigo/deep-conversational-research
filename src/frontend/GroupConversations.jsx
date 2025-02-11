@@ -4,6 +4,10 @@ import { marked } from "marked";
 function GroupConversations({ eventLog, numGroups }) {
   const [activeGroupTab, setActiveGroupTab] = useState(0);
 
+  if (numGroups <= 0) {
+    return <div>No groups available</div>;
+  }
+
   // Create an array to store the conversation for each group
   const conversations = Array.from({ length: numGroups }, () => []);
 

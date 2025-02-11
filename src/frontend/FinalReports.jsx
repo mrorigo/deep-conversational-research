@@ -8,7 +8,12 @@ function FinalReports({ report, revisedReport, sharedInsights }) {
   useEffect(() => {}, []);
 
   const renderMarkdown = (markdown) => {
-    return { __html: marked(markdown, { sanitize: true }) };
+    try {
+      return { __html: marked(markdown, { sanitize: true }) };
+    } catch (err) {
+      console.error("Failed to render markdown: ", err);
+      return { __html: "<p>Error rendering markdown</p>" };
+    }
   };
 
   const copyToClipboard = async (text) => {
@@ -175,7 +180,11 @@ function FinalReports({ report, revisedReport, sharedInsights }) {
             <div className="p-3" style={styles.sharedInsightsContainer}>
               <ul>
                 {sharedInsights.map((insight, index) => (
-                  <li key={index}>{insight}</li>
+                  <li
+                    key={index}
+                    className="p-3"
+                    dangerouslySetInnerHTML={renderMarkdown(insight)}
+                  />
                 ))}
               </ul>
             </div>
