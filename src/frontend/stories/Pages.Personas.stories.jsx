@@ -1,24 +1,24 @@
 import React from "react";
 import Header from "../components/Header";
 import Footer from "../components/Footer";
-import AgentGallery from "../components/AgentGallery";
+import PersonaGallery from "../components/PersonaGallery";
 
 export default {
-  title: "Pages/Agents",
-  component: AgentGallery,
+  title: "Pages/Personas",
+  component: PersonaGallery,
 };
 
 const Template = (args) => (
   <div>
     <Header />
-    <AgentGallery agents={args.agents} />
+    <PersonaGallery personas={args.personas} />
     <Footer />
   </div>
 );
 
 export const Default = Template.bind({});
 Default.args = {
-  agents: [
+  personas: [
     {
       title: "Conservative Environmentalist",
       persona: "You are a conservative environmentalist",

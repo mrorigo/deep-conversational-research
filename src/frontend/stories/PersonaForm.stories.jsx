@@ -1,15 +1,15 @@
 import React from "react";
-import AgentForm from "../components/AgentForm";
+import PersonaForm from "../components/PersonaForm";
 
 export default {
-  title: "Components/AgentForm",
-  component: AgentForm,
+  title: "Components/PersonaForm",
+  component: PersonaForm,
   argTypes: {
     onSubmit: { action: "submitted" },
   },
 };
 
-const Template = (args) => <AgentForm {...args} />;
+const Template = (args) => <PersonaForm {...args} />;
 
 export const Default = Template.bind({});
 Default.args = {};

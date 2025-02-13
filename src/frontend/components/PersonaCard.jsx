@@ -1,8 +1,8 @@
 import React, { useState } from "react";
 import Modal from "./Modal";
-import AgentForm from "./AgentForm";
+import PersonaForm from "./PersonaForm";
 
-function AgentCard({ agent, onAgentUpdate }) {
+function PersonaCard({ persona, onPersonaUpdate }) {
   const [isModalOpen, setIsModalOpen] = useState(false);
 
   const openModal = () => {
@@ -16,18 +16,18 @@ function AgentCard({ agent, onAgentUpdate }) {
   return (
     <div className="card">
       <div className="card-body">
-        <h5 className="card-title">{agent.title}</h5>
-        <p className="card-text">{agent.persona}</p>
+        <h5 className="card-title">{persona.title}</h5>
+        <p className="card-text">{persona.persona}</p>
       </div>
       <div className="card-footer">
         <button className="btn btn-secondary" onClick={openModal}>
           Edit
         </button>
       </div>
-      <Modal isOpen={isModalOpen} onClose={closeModal} title="Edit Agent">
-        <AgentForm
-          agent={agent}
-          onSubmit={onAgentUpdate}
+      <Modal isOpen={isModalOpen} onClose={closeModal} title="Edit Persona">
+        <PersonaForm
+          persona={persona}
+          onSubmit={onPersonaUpdate}
           onClose={closeModal}
         />
       </Modal>
@@ -35,4 +35,4 @@ function AgentCard({ agent, onAgentUpdate }) {
   );
 }
 
-export default AgentCard;
+export default PersonaCard;

@@ -1,10 +1,10 @@
 import React from "react";
 import NavigationBar from "./NavigationBar";
 
-function Header() {
+function Header({ onNavigate }) {
   return (
     <header className="bg-light p-3">
-      <NavigationBar />
+      <NavigationBar onNavigate={onNavigate} />
     </header>
   );
 }

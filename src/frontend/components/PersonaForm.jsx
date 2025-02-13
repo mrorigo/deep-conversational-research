@@ -1,7 +1,7 @@
 import React from "react";
 import { useForm } from "react-hook-form";
 
-function AgentForm({ onSubmit, agent, onClose }) {
+function PersonaForm({ onSubmit, persona, onClose }) {
   const {
     register,
     handleSubmit,
@@ -10,8 +10,8 @@ function AgentForm({ onSubmit, agent, onClose }) {
     reset,
   } = useForm({
     defaultValues: {
-      title: agent ? agent.title : "",
-      persona: agent ? agent.persona : "",
+      title: persona ? persona.title : "",
+      persona: persona ? persona.persona : "",
     },
   });
 
@@ -64,4 +64,4 @@ function AgentForm({ onSubmit, agent, onClose }) {
   );
 }
 
-export default AgentForm;
+export default PersonaForm;

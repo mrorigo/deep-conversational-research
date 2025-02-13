@@ -1,6 +1,6 @@
 import React from "react";
 
-function NavigationBar() {
+function NavigationBar({ onNavigate }) {
   return (
     <nav className="navbar navbar-expand-lg navbar-light bg-light">
       <a className="navbar-brand" href="#">
@@ -20,17 +20,29 @@ function NavigationBar() {
       <div className="collapse navbar-collapse" id="navbarNav">
         <ul className="navbar-nav">
           <li className="nav-item active">
-            <a className="nav-link" href="#">
+            <a
+              className="nav-link"
+              href="#"
+              onClick={() => onNavigate("start")}
+            >
               Start
             </a>
           </li>
           <li className="nav-item active">
-            <a className="nav-link" href="#">
-              Agents
+            <a
+              className="nav-link"
+              href="#"
+              onClick={() => onNavigate("personas")}
+            >
+              Personas
             </a>
           </li>
           <li className="nav-item active">
-            <a className="nav-link" href="#">
+            <a
+              className="nav-link"
+              href="#"
+              onClick={() => onNavigate("research")}
+            >
               Research
             </a>
           </li>
