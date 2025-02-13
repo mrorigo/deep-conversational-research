@@ -9,8 +9,8 @@ function Splash() {
         backgroundColor: "#f0f0f0",
       }}
     >
-      <h1>Splash Section</h1>
-      <p>This is a placeholder for the main content of the page.</p>
+      <h1>Deep Conversational Swarm Research</h1>
+      <p></p>
     </section>
   );
 }

@@ -1,40 +1,63 @@
-import React, { useState } from "react";
+import React from "react";
+import { useForm } from "react-hook-form";
 
-function AgentForm({ onSubmit }) {
-  const [name, setName] = useState("");
-  const [persona, setPersona] = useState("");
+function AgentForm({ onSubmit, agent, onClose }) {
+  const {
+    register,
+    handleSubmit,
+    setValue,
+    formState: { errors },
+    reset,
+  } = useForm({
+    defaultValues: {
+      title: agent ? agent.title : "",
+      persona: agent ? agent.persona : "",
+    },
+  });
 
-  const handleSubmit = (event) => {
-    event.preventDefault();
-    onSubmit({ name, persona });
-    setName("");
-    setPersona("");
+  const clearForm = () => {
+    reset({ title: "", persona: "" });
+  };
+
+  const onSubmitHandler = (data) => {
+    onSubmit(data);
+    clearForm();
+    onClose();
   };
 
   return (
     <div>
-      <form onSubmit={handleSubmit}>
+      <form onSubmit={handleSubmit(onSubmitHandler)}>
         <div className="form-group">
-          <label htmlFor="name">Name:</label>
+          <label htmlFor="title">Title:</label>
           <input
             type="text"
             className="form-control"
-            id="name"
-            value={name}
-            onChange={(e) => setName(e.target.value)}
+            id="title"
+            {...register("title", {
+              required: "Title is required",
+              minLength: {
+                value: 3,
+                message: "Title must be at least 3 characters",
+              },
+            })}
           />
+          {errors.title && (
+            <p className="text-danger">{errors.title.message}</p>
+          )}
         </div>
         <div className="form-group">
-          <label htmlFor="persona">Persona:</label>
+          <label htmlFor="persona">
+            Persona <small>(You are..)</small>
+          </label>
           <textarea
             className="form-control"
             id="persona"
-            value={persona}
-            onChange={(e) => setPersona(e.target.value)}
+            {...register("persona")}
           ></textarea>
         </div>
         <button type="submit" className="btn btn-primary">
-          Submit
+          Save
         </button>
       </form>
     </div>
