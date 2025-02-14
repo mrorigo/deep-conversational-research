@@ -32,15 +32,6 @@ function NavigationBar({ onNavigate }) {
             <a
               className="nav-link"
               href="#"
-              onClick={() => onNavigate("personas")}
-            >
-              Personas
-            </a>
-          </li>
-          <li className="nav-item active">
-            <a
-              className="nav-link"
-              href="#"
               onClick={() => onNavigate("research")}
             >
               Research

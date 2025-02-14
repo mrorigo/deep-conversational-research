@@ -4,7 +4,7 @@ import Footer from "../components/Footer";
 import Splash from "../components/Splash";
 
 export default {
-  title: "Pages/Front Page",
+  title: "Pages/Start",
   component: undefined,
 };
 
