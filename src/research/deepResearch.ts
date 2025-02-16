@@ -169,7 +169,9 @@ async function processSerpResult({
   console.log(
     `deepResearch: Ran query "${query}", found ${contents.length} contents`,
   );
-
+  if (contents.length === 0) {
+    return { learnings: [], followUpQuestions: [] };
+  }
   try {
     const message = await callOpenAI(
       llmConfig,
