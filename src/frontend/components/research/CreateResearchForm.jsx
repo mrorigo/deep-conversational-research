@@ -15,13 +15,16 @@ function CreateResearchForm({ onSubmit }) {
   const [numGroups, setNumGroups] = useState(2);
   const [numAgents, setNumAgents] = useState(4);
   const [enableResearch, setEnableResearch] = useState(false);
-  const [researchDepth, setResearchDepth] = useState(2);
+  const [researchDepth, setResearchDepth] = useState(1);
   const [researchBreadth, setResearchBreadth] = useState(3);
+  const initialModelsString =
+    process.env.OPENAI_MODELS || "gemini-2.0-flash,gemini-1.5-flash";
+  const availableModels = initialModelsString.split(",");
   const [models, setModels] = useState(
-    process.env.OPENAI_MODELS || "gemini-2.0-flash,gemini-1.5-flash",
-  );
-  const [rounds, setRounds] = useState(3);
-  const [steps, setSteps] = useState(5);
+    availableModels.length > 0 ? [availableModels[0]] : [],
+  ); // Initialize with the first model selected if available
+  const [rounds, setRounds] = useState(2);
+  const [steps, setSteps] = useState(6);
   const [errors, setErrors] = useState({});
   const modalRef = useRef(null);
 
@@ -50,7 +53,7 @@ function CreateResearchForm({ onSubmit }) {
       isValid = false;
     }
 
-    if (!models) {
+    if (!models || models.length === 0) {
       newErrors.models = "Models are required";
       isValid = false;
     }
@@ -82,7 +85,7 @@ function CreateResearchForm({ onSubmit }) {
         enableResearch: enableResearch,
         researchDepth: parseInt(researchDepth),
         researchBreadth: parseInt(researchBreadth),
-        models: models.split(","),
+        models: models,
         rounds: parseInt(rounds),
         steps: parseInt(steps),
         conversationId: conversationId,
@@ -95,6 +98,7 @@ function CreateResearchForm({ onSubmit }) {
       <div className="form-group">
         <label htmlFor="topic">Topic / Context:</label>
         <textarea
+          placeholder="Why are Ccoa prices suddenly skyrocketing in 2025?"
           rows="3"
           className="form-control"
           id="topic"
@@ -106,33 +110,42 @@ function CreateResearchForm({ onSubmit }) {
         {errors.topic && <div className="text-danger">{errors.topic}</div>}
       </div>
 
-      <div className="form-group">
-        <label htmlFor="num_groups">Number of Groups:</label>
-        <input
-          type="number"
-          className="form-control"
-          id="num_groups"
-          value={numGroups}
-          onChange={(e) => setNumGroups(e.target.value)}
-          required
-        />
-        {errors.numGroups && (
-          <div className="text-danger">{errors.numGroups}</div>
-        )}
-      </div>
+      <div className="row">
+        <div className="form-group col-md-6">
+          <label htmlFor="num_agents">Number of Agents:</label>
+          <input
+            type="number"
+            className="form-control"
+            id="num_agents"
+            value={numAgents}
+            onChange={(e) => setNumAgents(e.target.value)}
+            required
+          />
+          {errors.numAgents && (
+            <div className="text-danger">{errors.numAgents}</div>
+          )}
+        </div>
 
-      <div className="form-group">
-        <label htmlFor="num_agents">Number of Agents:</label>
-        <input
-          type="number"
-          className="form-control"
-          id="num_agents"
-          value={numAgents}
-          onChange={(e) => setNumAgents(e.target.value)}
-          required
-        />
-        {errors.numAgents && (
-          <div className="text-danger">{errors.numAgents}</div>
+        <div className="form-group col-md-6">
+          <label htmlFor="num_groups">Number of Groups:</label>
+          <input
+            type="number"
+            className="form-control"
+            id="num_groups"
+            value={numGroups}
+            onChange={(e) => setNumGroups(e.target.value)}
+            required
+          />
+          {errors.numGroups && (
+            <div className="text-danger">{errors.numGroups}</div>
+          )}
+        </div>
+        {numGroups && numAgents && numAgents % numGroups !== 0 && (
+          <div className="col-md-12">
+            <div className="alert alert-warning mt-2" role="alert">
+              ⚠️ The number of agents must be divisible by the number of groups.
+            </div>
+          </div>
         )}
       </div>
 
@@ -178,15 +191,28 @@ function CreateResearchForm({ onSubmit }) {
       )}
 
       <div className="form-group">
-        <label htmlFor="models">Models (comma-separated):</label>
-        <input
-          type="text"
-          className="form-control"
-          id="models"
-          value={models}
-          onChange={(e) => setModels(e.target.value)}
-          required
-        />
+        <label htmlFor="models">Models:</label>
+        {availableModels.map((model) => (
+          <div className="form-check" key={model}>
+            <input
+              className="form-check-input"
+              type="checkbox"
+              value={model}
+              id={`model-${model}`}
+              checked={models.includes(model)}
+              onChange={(e) => {
+                if (e.target.checked) {
+                  setModels([...models, model]);
+                } else {
+                  setModels(models.filter((m) => m !== model));
+                }
+              }}
+            />
+            <label className="form-check-label" htmlFor={`model-${model}`}>
+              {model}
+            </label>
+          </div>
+        ))}
         {errors.models && <div className="text-danger">{errors.models}</div>}
       </div>
 
@@ -215,6 +241,14 @@ function CreateResearchForm({ onSubmit }) {
         />
         {errors.steps && <div className="text-danger">{errors.steps}</div>}
       </div>
+
+      {numGroups && numAgents && steps && numAgents / numGroups > steps && (
+        <div className="alert alert-warning" role="alert">
+          ⚠️ The number of steps per round is less than the number of agents per
+          group. Not all agents will be able to speak in each round. Consider
+          decreasing the number of agents or increasing the steps per round.
+        </div>
+      )}
 
       <button type="submit" className="btn btn-primary">
         Start Conversation
