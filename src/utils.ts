@@ -54,7 +54,7 @@ async function limitedLLMCall(
         const delay = Math.pow(2, 3 - retries) * 1000;
         console.log(`Retrying in ${delay}ms... (${retries} retries remaining)`);
         await new Promise((resolve) => setTimeout(resolve, delay));
-        return callOpenAI(llmConfig, messages, options, retries - 1); // Retry
+        return limitedLLMCall(llmConfig, messages, options, retries - 1); // Retry
       } else {
         console.error("Max retries reached.  Failed to call LLM.");
         throw error; // Re-throw the error after exhausting retries
