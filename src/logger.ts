@@ -54,21 +54,20 @@ export class Logger extends EventEmitter {
   public async log(
     event: EventType,
     details: Record<string, any> = {},
-    conversationId?: string,
   ): Promise<void> {
     const timestamp = new Date().toISOString();
     const logEntry = {
       timestamp,
       event,
       ...details,
-      conversationId,
+      conversationId: this.logName,
     };
 
     try {
       const client = await this.pool.connect();
       await client.query(
         "INSERT INTO logs(timestamp, conversationId, event, details) VALUES($1, $2, $3, $4)",
-        [timestamp, conversationId, event, logEntry],
+        [timestamp, this.logName, event, logEntry],
       );
       client.release();
       console.log(`${this.logName}:` + JSON.stringify(logEntry));
