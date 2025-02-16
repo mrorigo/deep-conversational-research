@@ -1,5 +1,6 @@
 import OpenAI from "openai";
 import { ChatCompletionMessageParam } from "openai/resources/chat";
+import { limitFunction } from "p-limit";
 
 // Handle system prompt based on the model (o-models don't accept system role)
 const getSystemRole = (model: string): "user" | "system" => {
@@ -18,7 +19,19 @@ export type LLMConfig = {
   };
 };
 
-async function callOpenAI(
+const callOpenAI = limitFunction(
+  async (
+    llmConfig: LLMConfig,
+    messages: ChatCompletionMessageParam[],
+    options?: any,
+    retries: number = 5,
+  ): Promise<any> => {
+    return await limitedLLMCall(llmConfig, messages, options, retries);
+  },
+  { concurrency: 2 },
+);
+
+async function limitedLLMCall(
   llmConfig: LLMConfig,
   messages: ChatCompletionMessageParam[],
   options?: any,
