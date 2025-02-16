@@ -1,26 +1,26 @@
 import Agent from "./Agent.js";
 import Conversation from "./Conversation.js";
-import OpenAI from "openai";
-import { callOpenAI, getSystemRole } from "./utils.js";
+import { callOpenAI, getSystemRole, LLMConfig } from "./utils.js";
 import { Logger } from "./logger.js";
 
 class Network {
-  private subgroups: Agent[][] = [];
+  // private groups: Agent[][] = [];
   private sharedInsights: string[] = [];
 
   constructor(
-    private agents: Agent[],
-    private summary_model: string,
-    private openai: OpenAI,
+    private groups: Agent[][],
+    private groupDescriptions: string[],
+    // private agents: Agent[],
+    private summaryLLMConfig: LLMConfig,
     private logger: Logger,
   ) {}
 
-  public createSubgroups(subgroupSize: number): void {
-    this.subgroups = [];
-    for (let i = 0; i < this.agents.length; i += subgroupSize) {
-      this.subgroups.push(this.agents.slice(i, i + subgroupSize));
-    }
-  }
+  // public createSubgroups(subgroupSize: number): void {
+  //   this.groups = [];
+  //   for (let i = 0; i < this.agents.length; i += subgroupSize) {
+  //     this.groups.push(this.agents.slice(i, i + subgroupSize));
+  //   }
+  // }
 
   public async startConversations(
     topic: string,
@@ -28,13 +28,14 @@ class Network {
     maxSteps: number = 5,
     enableResearch: boolean = false,
   ): Promise<string[]> {
-    if (this.subgroups.length === 0) {
+    if (this.groups.length === 0) {
       throw new Error("No subgroups created. Please create subgroups first.");
     }
 
-    const conversations: Conversation[] = this.subgroups.map(
-      (agents, i: number) =>
-        new Conversation(i, agents, topic, enableResearch, this.logger),
+    const conversations: Conversation[] = this.groups.map(
+      (agents, i: number) => {
+        return new Conversation(i, agents, topic, enableResearch, this.logger);
+      },
     );
 
     // Initial round of conversations
@@ -70,12 +71,12 @@ class Network {
 
     for (let i = 0; i < conversations.length; i++) {
       const conversation = conversations[i];
-      const conversationHistory = conversation.getConversationHistory();
+      const conversationHistory = conversation.getHistory();
 
       try {
         const message = await this.summarizeConversation(
           conversation.getTopic(),
-          conversationHistory,
+          conversationHistory.slice(-maxSteps),
           maxSteps,
         );
         const summary = message?.content;
@@ -85,9 +86,9 @@ class Network {
         this.sharedInsights.push(summary); // Store the shared insight
 
         // Share the summary with other subgroups (excluding the current one)
-        for (let j = 0; j < this.subgroups.length; j++) {
+        for (let j = 0; j < this.groups.length; j++) {
           if (i !== j) {
-            const otherSubgroup = this.subgroups[j];
+            const otherSubgroup = this.groups[j];
             for (const agent of otherSubgroup) {
               this.addSummaryToConversationHistory(
                 agent,
@@ -128,15 +129,15 @@ class Network {
     try {
       // Summarize the last N steps of the conversation (plus # subgroups for shared insights)
       conversationHistory = conversationHistory.slice(
-        -Math.min(conversationHistory.length, maxSteps + this.subgroups.length),
+        -Math.min(conversationHistory.length, maxSteps + this.groups.length),
       );
       console.log(
         "Summarizing conversation:\n",
         conversationHistory.join("\n"),
       );
-      const message = await callOpenAI(this.openai, this.summary_model, [
+      const message = await callOpenAI(this.summaryLLMConfig, [
         {
-          role: getSystemRole(this.summary_model),
+          role: getSystemRole(this.summaryLLMConfig.model),
           content:
             "You are an expert summarizer tasked with distilling the key insights and arguments from a conversation between experts. " +
             "The target audience is other groups of experts discussing similar topics. " +
@@ -182,9 +183,9 @@ class Network {
 
   private async reviseFinalReport(report: string): Promise<string> {
     try {
-      const message = await callOpenAI(this.openai, this.summary_model, [
+      const message = await callOpenAI(this.summaryLLMConfig, [
         {
-          role: getSystemRole(this.summary_model),
+          role: getSystemRole(this.summaryLLMConfig.model),
           content:
             "You are an AI research assistant tasked with revising a research report. " +
             "Based on the following report, make any necessary revisions to improve clarity, coherence, and overall quality." +
@@ -205,9 +206,9 @@ class Network {
     topic: string,
   ): Promise<any> {
     try {
-      const message = await callOpenAI(this.openai, this.summary_model, [
+      const message = await callOpenAI(this.summaryLLMConfig, [
         {
-          role: getSystemRole(this.summary_model),
+          role: getSystemRole(this.summaryLLMConfig.model),
           content:
             `You are an AI research assistant tasked with generating a comprehensive final report on the topic of "${topic}".  ` +
             `Based on the following shared insights from multiple discussions, create a detailed research report covering key ` +

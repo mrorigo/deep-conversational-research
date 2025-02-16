@@ -71,7 +71,7 @@ export class Logger extends EventEmitter {
         [timestamp, conversationId, event, logEntry],
       );
       client.release();
-      console.log(JSON.stringify(logEntry));
+      console.log(`${this.logName}:` + JSON.stringify(logEntry));
     } catch (err) {
       console.error("Error inserting log entry:", err);
     }
@@ -94,15 +94,28 @@ export class Logger extends EventEmitter {
     }
   }
 
-  public async getDistinctConversationIds(): Promise<any[]> {
+  public async getDistinctConversations(): Promise<any[]> {
     try {
       const client = await this.pool.connect();
       const result = await client.query(
-        "SELECT DISTINCT conversationId FROM logs",
+        "SELECT DISTINCT conversationId, details FROM logs where event = 'NewResearchConversation'",
       );
       client.release();
-      console.log("Distinct conversation IDs:", result.rows);
-      return result.rows;
+      const conversations = result.rows.map((row) => {
+        return {
+          conversationId: row.conversationid,
+          details: row.details,
+        };
+      });
+
+      const distinctConversations = conversations.filter(
+        (conversation, index, self) =>
+          index ===
+          self.findIndex(
+            (t) => t.conversationId === conversation.conversationId,
+          ),
+      );
+      return distinctConversations;
     } catch (err) {
       console.error("Error retrieving distinct conversation IDs:", err);
       return [];

@@ -5,7 +5,6 @@ function EventLog({ eventLog }) {
   const [searchTerm, setSearchTerm] = useState("");
   const [expandedEvents, setExpandedEvents] = useState({});
 
-  console.log("EventLog", eventLog);
   useEffect(() => {
     if (eventLogRef.current) {
       eventLogRef.current.scrollTop = eventLogRef.current.scrollHeight;
@@ -49,7 +48,7 @@ function EventLog({ eventLog }) {
   };
 
   return (
-    <div id="eventLogContainer">
+    <div className="container mt-3">
       <div className="mb-2">
         <input
           type="text"

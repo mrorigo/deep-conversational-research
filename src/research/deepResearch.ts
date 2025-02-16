@@ -1,16 +1,9 @@
 import * as dotenv from "dotenv";
 import DuckDuckGoSearch from "./ddgs.js";
-import { callOpenAI, getSystemRole } from "../utils.js";
-import getLogger from "../logger.js";
-import { AgentContext } from "../Agent.js";
+import { callOpenAI, getSystemRole, LLMConfig } from "../utils.js";
+import { Logger } from "../logger.js";
 
 dotenv.config();
-
-interface DeepResearchParams {
-  query: string;
-  breadth: number;
-  depth: number;
-}
 
 const systemPrompt = () => {
   const now = new Date().toISOString();
@@ -32,21 +25,19 @@ async function generateSerpQueries({
   query,
   numQueries = 3,
   learnings,
-  agentContext,
+  llmConfig,
 }: {
   query: string;
   numQueries?: number;
   learnings?: string[];
-  agentContext: AgentContext;
+  llmConfig: LLMConfig;
 }) {
-  const model = agentContext.model;
   try {
     const message = await callOpenAI(
-      agentContext.openai,
-      model,
+      llmConfig,
       [
         {
-          role: getSystemRole(model),
+          role: getSystemRole(llmConfig.model),
           content: systemPrompt(),
         },
         {
@@ -157,16 +148,14 @@ async function processSerpResult({
   results,
   numLearnings = 3,
   numFollowUpQuestions = 3,
-  agentContext,
+  llmConfig,
 }: {
   query: string;
   results: any[];
   numLearnings?: number;
   numFollowUpQuestions?: number;
-  agentContext: AgentContext;
+  llmConfig: LLMConfig;
 }) {
-  const model = agentContext.model;
-
   const contents: string[] = [];
   for (const result of results) {
     const content = ((await scrapeContent(result.href)) || "").substring(
@@ -183,11 +172,10 @@ async function processSerpResult({
 
   try {
     const message = await callOpenAI(
-      agentContext.openai,
-      model,
+      llmConfig,
       [
         {
-          role: getSystemRole(model),
+          role: getSystemRole(llmConfig.model),
           content: systemPrompt(),
         },
         {
@@ -248,19 +236,17 @@ async function writeFinalReport({
   prompt,
   learnings,
   visitedUrls,
-  agentContext,
+  llmConfig,
 }: {
   prompt: string;
   learnings: string[];
   visitedUrls: string[];
-  agentContext: AgentContext;
+  llmConfig: LLMConfig;
 }) {
-  const model = agentContext.model;
-
   try {
-    const message = await callOpenAI(agentContext.openai, model, [
+    const message = await callOpenAI(llmConfig, [
       {
-        role: getSystemRole(model),
+        role: getSystemRole(llmConfig.model),
         content: systemPrompt(),
       },
       {
@@ -286,24 +272,22 @@ export async function deepResearch({
   depth,
   learnings = [],
   visitedUrls = [],
-  agentContext,
+  llmConfig,
+  logger,
 }: {
   query: string;
   breadth: number;
   depth: number;
   learnings?: string[];
   visitedUrls?: string[];
-  agentContext: AgentContext;
+  llmConfig: LLMConfig;
+  logger: Logger;
 }): Promise<{ learnings: string[]; visitedUrls: string[]; report: string }> {
-  if (!agentContext) {
-    throw new Error("Agent context is required for deep research.");
-  }
-
   const serpQueries = await generateSerpQueries({
     query,
     learnings,
     numQueries: breadth,
-    agentContext,
+    llmConfig,
   });
 
   let allLearnings: string[] = [...learnings];
@@ -328,13 +312,13 @@ export async function deepResearch({
           query: serpQuery.query,
           results: results,
           numFollowUpQuestions: Math.ceil(breadth / 2),
-          agentContext,
+          llmConfig,
         });
 
         allLearnings = [...allLearnings, ...newLearnings.learnings];
         allUrls = [...allUrls, ...newUrls];
 
-        agentContext.logger.log("ResearchEvent", {
+        logger.log("ResearchEvent", {
           query: serpQuery.query,
           learnings: newLearnings.learnings,
           urls: newUrls,
@@ -356,7 +340,8 @@ export async function deepResearch({
             depth: depth - 1,
             learnings: allLearnings,
             visitedUrls: allUrls,
-            agentContext,
+            llmConfig,
+            logger,
           });
 
           allLearnings = [...allLearnings, ...deeperResearch.learnings];
@@ -374,7 +359,7 @@ export async function deepResearch({
     prompt: query,
     learnings: [...new Set(allLearnings)],
     visitedUrls: [...new Set(allUrls)],
-    agentContext: agentContext,
+    llmConfig: llmConfig,
   });
 
   return {

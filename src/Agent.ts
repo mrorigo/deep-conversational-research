@@ -2,7 +2,7 @@ import OpenAI from "openai";
 import * as dotenv from "dotenv";
 import { ChatCompletionMessageParam } from "openai/resources/chat";
 import { deepResearch } from "./research/deepResearch.js";
-import { callOpenAI, getSystemRole } from "./utils.js";
+import { callOpenAI, getSystemRole, LLMConfig } from "./utils.js";
 import { Logger } from "./logger.js";
 
 dotenv.config();
@@ -27,32 +27,16 @@ type ToolDefinition = {
   };
 };
 
-export interface AgentContext {
-  id: string;
-  model: string;
-  openai: OpenAI;
-  logger: Logger;
-  callOpenAI: (
-    openai: OpenAI,
-    model: string,
-    messages: any,
-    options?: any,
-    retries?: number,
-  ) => Promise<any>;
-}
-
 class Agent {
   private conversationHistory: ChatCompletionMessageParam[] = [];
 
   constructor(
     public id: string,
-    private model: string = "gpt-4o-mini",
-    private researchModel: string,
+    private llmConfig: LLMConfig,
     private system_prompt: string = defaultSystemPrompt,
     public historyLimit: number = 20,
     public breadth: number = 3,
     public depth: number = 2,
-    private openai: OpenAI,
     private logger: Logger,
   ) {}
 
@@ -97,7 +81,7 @@ class Agent {
     try {
       const messages = [
         {
-          role: getSystemRole(this.model),
+          role: getSystemRole(this.llmConfig.model),
           content:
             "Your name is " +
             this.id +
@@ -111,16 +95,11 @@ class Agent {
       ];
       console.log("Messages:", messages);
 
-      const message = await callOpenAI(
-        this.openai as OpenAI,
-        this.model,
-        messages,
-        {
-          tools: tools,
-          tool_choice: tool_choice,
-          // response_format: { type: "json_object" },
-        },
-      );
+      const message = await callOpenAI(this.llmConfig, messages, {
+        tools: tools,
+        tool_choice: tool_choice,
+        // response_format: { type: "json_object" },
+      });
 
       let parsedResponse = message?.content || "No response";
       const toolCalls = message?.tool_calls;
@@ -179,12 +158,8 @@ class Agent {
       query: query,
       breadth: this.breadth,
       depth: this.depth,
-      agentContext: {
-        id: this.id,
-        model: this.researchModel,
-        openai: this.openai as OpenAI,
-        logger: this.logger,
-      } as AgentContext,
+      llmConfig: this.llmConfig, // TODO: researchLLMConfig
+      logger: this.logger,
     });
   }
 }

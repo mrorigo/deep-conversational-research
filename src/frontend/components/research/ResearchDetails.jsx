@@ -56,11 +56,11 @@ function ResearchDetails({ ws, researchId, onCloseResearch }) {
   }, [ws]);
 
   return (
-    <div>
+    <div className="container mt-3">
       <ul className="nav nav-tabs">
         <li className="nav-item">
           <a
-            className={`nav-link \${activeTab === "overview" ? "active" : ""}`}
+            className={`nav-link ${activeTab === "overview" ? "active" : ""}`}
             href="#"
             onClick={() => setActiveTab("overview")}
           >
@@ -69,7 +69,7 @@ function ResearchDetails({ ws, researchId, onCloseResearch }) {
         </li>
         <li className="nav-item">
           <a
-            className={`nav-link \${activeTab === "eventLog" ? "active" : ""}`}
+            className={`nav-link ${activeTab === "eventLog" ? "active" : ""}`}
             href="#"
             onClick={() => setActiveTab("eventLog")}
           >
@@ -78,7 +78,7 @@ function ResearchDetails({ ws, researchId, onCloseResearch }) {
         </li>
         <li className="nav-item">
           <a
-            className={`nav-link \${activeTab === "groupConversations" ? "active" : ""}`}
+            className={`nav-link ${activeTab === "groupConversations" ? "active" : ""}`}
             href="#"
             onClick={() => setActiveTab("groupConversations")}
           >
@@ -88,7 +88,7 @@ function ResearchDetails({ ws, researchId, onCloseResearch }) {
         {reportsAvailable && (
           <li className="nav-item">
             <a
-              className={`nav-link \${activeTab === "finalReports" ? "active" : ""}`}
+              className={`nav-link ${activeTab === "finalReports" ? "active" : ""}`}
               href="#"
               onClick={() => setActiveTab("finalReports")}
             >

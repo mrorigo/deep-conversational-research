@@ -1,7 +1,7 @@
 // import { readFileSync } from "fs";
 // import { open } from "fs/promises";
-// import getLogger from "./logger.js";
 // import { main } from "./index.js";
+// import getLogger, { Logger } from "./logger.js";
 
 // function printHelp() {
 //   console.log(
@@ -149,14 +149,15 @@
 
 // async function runMain() {
 //   const options = parseArgs();
-//   const logger = getLogger();
+//   const id = Math.random().toString(36).substring(7);
+//   const logger = getLogger(id);
 //   const logFd = await open(options.logFile, "a");
 //   logger.on("log", (log) => {
 //     logFd.write(JSON.stringify(log) + "\n");
 //   });
 //   const context = getContext(options);
 
-//   main(context, options);
+//   main(context, options, logger);
 //   logFd.close();
 // }
 

@@ -33,15 +33,17 @@ class Conversation {
 
     for (let i = 0; i < maxSteps; i++) {
       const currentAgent = this.agents[currentAgentIndex];
+
+      // Force research on the first turn of each round
+      const forceResearch = i === 0 && this.enableResearch;
+
       this.logger.log("StepStarted", {
         group: this.group,
         roundNumber,
         stepNumber: i + 1,
         agent: currentAgent.id,
+        forceResearch,
       });
-
-      // Force research on the first turn of each round
-      const forceResearch = i === 0 && this.enableResearch;
 
       const response = await currentAgent.generateResponse(
         currentPrompt,
@@ -70,7 +72,7 @@ class Conversation {
   }
 
   // TODO: Tokenize and return only the max context size tokens
-  public getConversationHistory(): string[] {
+  public getHistory(): string[] {
     return this.conversationHistory;
   }
 

@@ -3,7 +3,7 @@ import ResearchCard from "./ResearchCard";
 
 function ResearchGallery({ researchList, onCreateResearch, onSelectResearch }) {
   return (
-    <div>
+    <div className="container mt-3">
       <div className="d-flex flex-wrap">
         {researchList.map((researchItem) => (
           <ResearchCard

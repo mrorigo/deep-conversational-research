@@ -10,7 +10,7 @@ function generateConversationId(topic) {
   return btoa(topic).substring(0, 12) + "-" + Math.abs(hash).toString(16);
 }
 
-function ConversationForm({ onSubmit }) {
+function CreateResearchForm({ onSubmit }) {
   const [topic, setTopic] = useState("");
   const [numGroups, setNumGroups] = useState(2);
   const [numAgents, setNumAgents] = useState(4);
@@ -85,9 +85,6 @@ function ConversationForm({ onSubmit }) {
         steps: parseInt(steps),
         conversationId: conversationId,
       });
-
-      // Close the modal
-      window.$("#conversationModal").modal("hide");
     }
   };
 
@@ -224,4 +221,4 @@ function ConversationForm({ onSubmit }) {
   );
 }
 
-export default ConversationForm;
+export default CreateResearchForm;

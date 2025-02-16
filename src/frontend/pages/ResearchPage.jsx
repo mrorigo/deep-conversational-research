@@ -1,6 +1,8 @@
 import React, { useEffect, useState } from "react";
-import ResearchGallery from "../components/ResearchGallery";
-import ResearchDetails from "../components/ResearchDetails";
+import ResearchGallery from "../components/research/ResearchGallery";
+import ResearchDetails from "../components/research/ResearchDetails";
+import CreateResearchForm from "../components/research/CreateResearchForm";
+import CreateResearchModal from "../components/research/CreateResearchModal";
 
 function ResearchPage() {
   const [researchList, setResearchList] = useState([]);
@@ -49,6 +51,11 @@ function ResearchPage() {
     return <div>Connecting to WebSocket...</div>;
   }
 
+  const openCreateResearchModal = () => {
+    console.log("Opening create research modal");
+    window.$("#researchModal").modal("show");
+  };
+
   const handleCloseResearch = () => {
     setCurrentResearchId(null);
   };
@@ -80,13 +87,6 @@ function ResearchPage() {
       console.error("WebSocket not connected");
     }
   };
-  // useEffect(() => {
-  //   setResearchList([
-  //     { id: "research 1", title: "Research 1" },
-  //     { id: "research 2", title: "Research 2" },
-  //     { id: "research 3", title: "Research 3" },
-  //   ]);
-  // }, []);
 
   return (
     <div>
@@ -100,10 +100,11 @@ function ResearchPage() {
       {!currentResearchId && (
         <ResearchGallery
           researchList={researchList}
-          onCreateResearch={handleCreateResearch}
+          onCreateResearch={openCreateResearchModal}
           onSelectResearch={handleSelectResearch}
         />
       )}
+      <CreateResearchModal onSubmit={handleCreateResearch} />
     </div>
   );
 }

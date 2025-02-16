@@ -6,20 +6,32 @@ const getSystemRole = (model: string): "user" | "system" => {
   return model.startsWith("o") ? "user" : "system";
 };
 
+export type LLMConfig = {
+  openai: OpenAI;
+  model: string;
+  options?: {
+    temperature?: number;
+    max_tokens?: number;
+    top_p?: number;
+    frequency_penalty?: number;
+    presence_penalty?: number;
+  };
+};
+
 async function callOpenAI(
-  openai: OpenAI,
-  model: string,
+  llmConfig: LLMConfig,
   messages: ChatCompletionMessageParam[],
   options?: any,
   retries: number = 5,
 ): Promise<any> {
   const req = {
-    model: model,
+    model: llmConfig.model,
     messages: messages,
     ...options,
+    ...llmConfig.options,
   };
   try {
-    const completion = await openai.chat.completions.create(req);
+    const completion = await llmConfig.openai.chat.completions.create(req);
     return completion.choices[0].message;
   } catch (error: any) {
     console.error("Error calling LLM:", error);
@@ -29,7 +41,7 @@ async function callOpenAI(
         const delay = Math.pow(2, 3 - retries) * 1000;
         console.log(`Retrying in ${delay}ms... (${retries} retries remaining)`);
         await new Promise((resolve) => setTimeout(resolve, delay));
-        return callOpenAI(openai, model, messages, options, retries - 1); // Retry
+        return callOpenAI(llmConfig, messages, options, retries - 1); // Retry
       } else {
         console.error("Max retries reached.  Failed to call LLM.");
         throw error; // Re-throw the error after exhausting retries

@@ -17,7 +17,7 @@ const __dirname = path.resolve();
 app.get("/", (req, res) => {
   res.setHeader(
     "Content-Security-Policy",
-    "default-src 'self'; script-src 'self' 'unsafe-inline' https://code.jquery.com https://cdn.jsdelivr.net https://stackpath.bootstrapcdn.com; script-src-elem 'self' https://code.jquery.com https://cdn.jsdelivr.net https://stackpath.bootstrapcdn.com 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://stackpath.bootstrapcdn.com https://fonts.googleapis.com/; img-src 'self' data:; font-src 'self' https://stackpath.bootstrapcdn.com https://fonts.googleapis.com/",
+    "default-src 'self'; script-src 'self' 'unsafe-inline' https://code.jquery.com https://cdn.jsdelivr.net https://stackpath.bootstrapcdn.com; script-src-elem 'self' https://code.jquery.com https://cdn.jsdelivr.net https://stackpath.bootstrapcdn.com 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://stackpath.bootstrapcdn.com https://fonts.googleapis.com/; img-src 'self' data:; font-src 'self' https://stackpath.bootstrapcdn.com https://fonts.googleapis.com/ https://fonts.gstatic.com/; connect-src 'self'; frame-src 'self';",
   );
 
   res.sendFile(path.join(__dirname, "frontend", "index.html"), (err) => {
@@ -81,7 +81,7 @@ wss.on("connection", (ws) => {
           models,
           rounds,
           steps,
-          conversationId: receivedConversationId, // Extract conversationId from message
+          conversationId, // Extract conversationId from message
         } = data.payload;
 
         console.log("Received start message:", data.payload);
@@ -94,7 +94,7 @@ wss.on("connection", (ws) => {
           !models ||
           !rounds ||
           !steps ||
-          !receivedConversationId
+          !conversationId
         ) {
           ws.send(
             JSON.stringify({
@@ -104,8 +104,6 @@ wss.on("connection", (ws) => {
           );
           return;
         }
-
-        conversationId = receivedConversationId; // Assign the received conversationId
 
         const options = {
           agents: num_agents,
@@ -121,10 +119,14 @@ wss.on("connection", (ws) => {
           researchModel: models[0], // Default to first model
         };
 
-        const logger = getLogger(receivedConversationId); // Get the logger instance here
+        const logger = getLogger(conversationId); // Get the logger instance here
 
         logger.on("log", (log) => {
-          const message = JSON.stringify({ type: "log", payload: log });
+          const message = JSON.stringify({
+            type: "log",
+            conversationId,
+            payload: log,
+          });
           try {
             ws.send(message);
           } catch (e) {
@@ -219,21 +221,12 @@ app.get("/api/topics", async (req, res) => {
   console.log("Listing available topics...");
   try {
     const logger = getLogger("topics");
-    const conversationIds = await logger.getDistinctConversationIds();
+    const conversations = await logger.getDistinctConversations();
 
-    const topics = conversationIds
-      .map((log) => {
-        const conversationId = log.conversationid;
-        if (conversationId) {
-          const topic = Buffer.from(
-            conversationId.split("-")[0],
-            "base64",
-          ).toString("ascii");
-          return { id: conversationId, topic: topic };
-        }
-        return null;
-      })
-      .filter((topic) => topic !== null);
+    const topics = conversations.map((log) => {
+      return { id: log.conversationId, topic: log.details.topic };
+    });
+
     res.json(topics);
   } catch (error) {
     console.error("Error reading log directory:", error);
