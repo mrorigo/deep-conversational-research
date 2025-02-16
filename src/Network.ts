@@ -9,18 +9,9 @@ class Network {
 
   constructor(
     private groups: Agent[][],
-    private groupDescriptions: string[],
-    // private agents: Agent[],
     private summaryLLMConfig: LLMConfig,
     private logger: Logger,
   ) {}
-
-  // public createSubgroups(subgroupSize: number): void {
-  //   this.groups = [];
-  //   for (let i = 0; i < this.agents.length; i += subgroupSize) {
-  //     this.groups.push(this.agents.slice(i, i + subgroupSize));
-  //   }
-  // }
 
   public async startConversations(
     topic: string,
@@ -210,9 +201,9 @@ class Network {
         {
           role: getSystemRole(this.summaryLLMConfig.model),
           content:
-            `You are an AI research assistant tasked with generating a comprehensive final report on the topic of "${topic}".  ` +
-            `Based on the following shared insights from multiple discussions, create a detailed research report covering key ` +
-            `findings, conclusions, and any remaining open questions:`,
+            `You are an AI research assistant tasked with generating a comprehensive final report based on shared insights collected during research on a user query:\n` +
+            `<user-query>${topic}</user-query>. ` +
+            `Create a detailed research report covering all key findings, conclusions, and any remaining open questions.`,
         },
         { role: "user", content: sharedInsights },
       ]);
