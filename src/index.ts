@@ -69,17 +69,12 @@ export async function main(
     groupDescriptions.push(description);
   }
 
-  console.log("GroupDescriptions", groupDescriptions);
-
-  // const agents: Agent[] = [];
-  //
-
   const agents_per_group = Math.floor(options.agents / options.groups);
   const groupedAgents: Agent[][] = [];
   for (let i = 0; i < options.groups; i++) {
     const group = [];
     for (let j = 0; j < agents_per_group; j++) {
-      const agents_per_group = Math.floor(options.agents / options.groups);
+      // const agents_per_group = Math.floor(options.agents / options.groups);
       const model = options.models[i % options.models.length];
       const llmConfig = {
         model,
@@ -90,8 +85,8 @@ export async function main(
       } as LLMConfig;
 
       const personaPrompt = personas[i][j].about_you;
-      const agentPrompt = `${personaPrompt}\n${system_prompt}\n${groupDescriptions[i]}`;
-      console.log("AgentPrompt", agentPrompt);
+      const agentPrompt = `${personaPrompt}\n${system_prompt}\n${groupDescriptions[i]}\nToday is ${new Date().toDateString()}.`;
+      // console.log("AgentPrompt", agentPrompt);
 
       const agent = new Agent(
         personas[i][j].name,
@@ -106,7 +101,6 @@ export async function main(
     }
     groupedAgents.push(group);
   }
-  console.log(groupedAgents);
 
   const summaryModel = options.models[0];
   const summaryllmConfig = {
@@ -118,12 +112,7 @@ export async function main(
   } as LLMConfig;
 
   // Create a network, use the first model as the summary model
-  const network = new Network(
-    groupedAgents,
-    groupDescriptions,
-    summaryllmConfig,
-    logger,
-  );
+  const network = new Network(groupedAgents, summaryllmConfig, logger);
 
   // Start conversations
   const finalReport = await network.startConversations(
