@@ -17,7 +17,9 @@ function CreateResearchForm({ onSubmit }) {
   const [enableResearch, setEnableResearch] = useState(false);
   const [researchDepth, setResearchDepth] = useState(2);
   const [researchBreadth, setResearchBreadth] = useState(3);
-  const [models, setModels] = useState("gpt-4o-mini");
+  const [models, setModels] = useState(
+    process.env.OPENAI_MODELS || "gemini-2.0-flash,gemini-1.5-flash",
+  );
   const [rounds, setRounds] = useState(3);
   const [steps, setSteps] = useState(5);
   const [errors, setErrors] = useState({});
