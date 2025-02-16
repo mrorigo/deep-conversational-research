@@ -3,7 +3,7 @@ import Network from "./Network.js";
 import OpenAI from "openai";
 import { Logger } from "./logger.js";
 import { LLMConfig } from "./utils.js";
-import { describePersonas, generatePersonas, Persona } from "./Personas.js";
+import { describePersonas, generatePersonas } from "./Personas.js";
 
 export async function main(
   context: string,
@@ -13,10 +13,10 @@ export async function main(
     models: string[];
     agents: number;
     groups: number;
-    enableResearch: boolean;
+    summaryModel: string;
     researchBreadth: number;
     researchDepth: number;
-    researchModel?: string;
+    researchModel: string;
   },
   logger: Logger,
 ) {
@@ -93,18 +93,22 @@ export async function main(
         llmConfig,
         agentPrompt,
         20, // historyLimit
-        options.researchBreadth,
-        options.researchDepth,
-        logger,
       );
       group.push(agent);
     }
     groupedAgents.push(group);
   }
 
-  const summaryModel = options.models[0];
   const summaryllmConfig = {
-    model: summaryModel,
+    model: options.summaryModel,
+    openai,
+    options: {
+      temperature: 0.3,
+    },
+  } as LLMConfig;
+
+  const researchllmConfig = {
+    model: options.researchModel,
     openai,
     options: {
       temperature: 0.3,
@@ -112,14 +116,18 @@ export async function main(
   } as LLMConfig;
 
   // Create a network, use the first model as the summary model
-  const network = new Network(groupedAgents, summaryllmConfig, logger);
+  const network = new Network(
+    groupedAgents,
+    summaryllmConfig,
+    researchllmConfig,
+    logger,
+  );
 
   // Start conversations
   const finalReport = await network.startConversations(
     context,
     options.rounds,
     options.steps,
-    options.enableResearch,
   );
   logger.log("FinalReports", {
     report: finalReport[0],

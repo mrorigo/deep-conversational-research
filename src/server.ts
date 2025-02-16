@@ -6,6 +6,8 @@ import { main } from "./index.js";
 import getLogger, { Logger } from "./logger.js";
 import * as fs from "fs";
 import path from "path";
+import * as dotenv from "dotenv";
+dotenv.config();
 
 const app = express();
 const port = process.env.PORT || 3210;
@@ -75,7 +77,6 @@ wss.on("connection", (ws) => {
           topic,
           num_groups,
           num_agents,
-          enableResearch,
           researchDepth,
           researchBreadth,
           models,
@@ -113,7 +114,7 @@ wss.on("connection", (ws) => {
           models: models.map((x: string) => x.trim()),
           text: topic,
           file: "",
-          enableResearch: enableResearch,
+          summaryModel: models[0], // Default to first model
           researchBreadth: researchBreadth,
           researchDepth: researchDepth,
           researchModel: models[0], // Default to first model
@@ -222,9 +223,8 @@ app.get("/api/topics", async (req, res) => {
   try {
     const logger = getLogger("topics");
     const conversations = await logger.getDistinctConversations();
-
     const topics = conversations.map((log) => {
-      return { id: log.conversationId, topic: log.details.topic };
+      return { id: log.conversationId, context: log.details.context };
     });
 
     res.json(topics);

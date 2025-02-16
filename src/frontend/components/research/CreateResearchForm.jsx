@@ -2,12 +2,8 @@ import React, { useState, useRef } from "react";
 
 // Function to generate a unique conversation ID from the topic
 function generateConversationId(topic) {
-  let hash = 0;
-  for (let i = 0; i < topic.length; i++) {
-    const char = topic.charCodeAt(i);
-    hash = (hash << 5) - hash + char;
-  }
-  return btoa(topic).substring(0, 12) + "-" + Math.abs(hash).toString(16);
+  const id = Math.random().toString(36).substring(2, 9);
+  return topic.replace(/\s+/g, "-").toLowerCase() + "-" + id;
 }
 
 function CreateResearchForm({ onSubmit }) {
@@ -98,7 +94,7 @@ function CreateResearchForm({ onSubmit }) {
       <div className="form-group">
         <label htmlFor="topic">Topic / Context:</label>
         <textarea
-          placeholder="Why are Ccoa prices suddenly skyrocketing in 2025?"
+          placeholder="Why are Cocoa prices suddenly skyrocketing in 2025?"
           rows="3"
           className="form-control"
           id="topic"

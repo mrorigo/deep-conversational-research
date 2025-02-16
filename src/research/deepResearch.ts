@@ -1,9 +1,6 @@
-import * as dotenv from "dotenv";
 import DuckDuckGoSearch from "./ddgs.js";
 import { callOpenAI, getSystemRole, LLMConfig } from "../utils.js";
 import { Logger } from "../logger.js";
-
-dotenv.config();
 
 const systemPrompt = () => {
   const now = new Date().toISOString();
@@ -21,7 +18,7 @@ const systemPrompt = () => {
   - You may use high levels of speculation or prediction, just flag it for me.`;
 };
 
-async function generateSerpQueries({
+export async function generateSerpQueries({
   query,
   numQueries = 3,
   learnings,
@@ -31,7 +28,7 @@ async function generateSerpQueries({
   numQueries?: number;
   learnings?: string[];
   llmConfig: LLMConfig;
-}) {
+}): Promise<string[]> {
   try {
     const message = await callOpenAI(
       llmConfig,
@@ -59,7 +56,7 @@ async function generateSerpQueries({
     const parsedResponse = message?.content || "No response";
 
     // Attempt to parse the response as a JSON object.  If it's valid JSON, use it.
-    let queries: { query: string; researchGoal: string }[];
+    let queries: string[];
     try {
       const jsonResponse = JSON.parse(parsedResponse);
       if (
@@ -71,10 +68,7 @@ async function generateSerpQueries({
           `Created ${jsonResponse.queries.length} queries from json`,
           jsonResponse.queries,
         );
-        queries = jsonResponse.queries.map((q: string) => ({
-          query: q,
-          researchGoal: "Research this query.",
-        }));
+        queries = jsonResponse.queries;
       } else {
         console.warn("Unexpected JSON format, attempting manual parse");
         queries = [];
@@ -91,17 +85,12 @@ async function generateSerpQueries({
         .map((q: any) => ({ query: q.trim() }))
         .filter((q: any) => q.query.length > 0)
         .filter((x: any) => parseInt(x.query) >= 0)
-        .map((x: any) => ({
-          query: x.query.replace(/^[\-0-9\.]+/, "").trim(),
-        }));
+        .map((x: any) => x.query.replace(/^[\-0-9\.]+/, "").trim());
       console.log(
         `Created ${extractedQueries.length} queries from manual parse`,
         extractedQueries,
       );
-      queries = extractedQueries.slice(0, numQueries).map((q: any) => ({
-        query: q.query,
-        researchGoal: "Research this query.",
-      }));
+      queries = extractedQueries.slice(0, numQueries);
     }
 
     return queries;
@@ -299,9 +288,9 @@ export async function deepResearch({
     try {
       // Use DuckDuckGoSearch instead of google_search
       const ddgs = new DuckDuckGoSearch();
-      if (serpQuery.query) {
+      if (serpQuery) {
         const results = await ddgs.text(
-          serpQuery.query,
+          serpQuery,
           "wt-wt",
           "moderate",
           null,
@@ -311,7 +300,7 @@ export async function deepResearch({
         const newUrls = results.map((result: any) => result.href);
 
         const newLearnings = await processSerpResult({
-          query: serpQuery.query,
+          query: serpQuery,
           results: results,
           numFollowUpQuestions: Math.ceil(breadth / 2),
           llmConfig,
@@ -321,7 +310,7 @@ export async function deepResearch({
         allUrls = [...allUrls, ...newUrls];
 
         logger.log("ResearchEvent", {
-          query: serpQuery.query,
+          query: serpQuery,
           learnings: newLearnings.learnings,
           urls: newUrls,
         });
@@ -332,7 +321,7 @@ export async function deepResearch({
           );
 
           const nextQuery = `
-            Previous research goal: ${serpQuery.researchGoal}
+            Previous research: ${serpQuery}
             Follow-up research directions: ${newLearnings.followUpQuestions.map((q: string) => `\n${q}`).join("")}
           `.trim();
 
@@ -353,7 +342,7 @@ export async function deepResearch({
         console.warn("serpQuery.query is undefined, skipping search.");
       }
     } catch (e: any) {
-      console.error(`Error running query: ${serpQuery.query}: `, e);
+      console.error(`Error running query: ${serpQuery}: `, e);
     }
   }
 

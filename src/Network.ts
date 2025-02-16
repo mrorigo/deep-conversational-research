@@ -2,14 +2,15 @@ import Agent from "./Agent.js";
 import Conversation from "./Conversation.js";
 import { callOpenAI, getSystemRole, LLMConfig } from "./utils.js";
 import { Logger } from "./logger.js";
+import { generateSerpQueries } from "./research/deepResearch.js";
 
 class Network {
-  // private groups: Agent[][] = [];
   private sharedInsights: string[] = [];
 
   constructor(
     private groups: Agent[][],
     private summaryLLMConfig: LLMConfig,
+    private researchLLMConfig: LLMConfig,
     private logger: Logger,
   ) {}
 
@@ -17,39 +18,40 @@ class Network {
     topic: string,
     numRounds: number = 3,
     maxSteps: number = 5,
-    enableResearch: boolean = false,
   ): Promise<string[]> {
     if (this.groups.length === 0) {
-      throw new Error("No subgroups created. Please create subgroups first.");
+      throw new Error("No groups created. Please create groups first.");
     }
 
     const conversations: Conversation[] = this.groups.map(
       (agents, i: number) => {
-        return new Conversation(i, agents, topic, enableResearch, this.logger);
+        return new Conversation(
+          i,
+          agents,
+          topic,
+          this.logger,
+          this.researchLLMConfig,
+        );
       },
     );
 
-    // Initial round of conversations
-    console.log(`== Starting initial round of discussions...`);
-    await Promise.all(
-      conversations.map((conversation) => conversation.startRound(1, maxSteps)),
-    );
-
-    for (let round = 1; round < numRounds; round++) {
+    for (let round = 0; round < numRounds; round++) {
       console.log(`== Starting round ${round} of discussions...`);
-      // Share insights after conversations
-      await this.shareInsights(conversations, maxSteps);
+      const serp: string[] = await generateSerpQueries({
+        query: topic,
+        learnings: this.sharedInsights,
+        numQueries: this.groups.length,
+        llmConfig: this.summaryLLMConfig,
+      });
+      console.log("SERP queries generated:", serp);
 
-      // Start new rounds of discussions based on shared insights
       await Promise.all(
-        conversations.map((conversation) =>
-          conversation.startRound(round + 1, maxSteps),
+        conversations.map((conversation, i) =>
+          conversation.startRound(round + 1, serp[i], maxSteps),
         ),
       );
+      await this.shareInsights(conversations, maxSteps);
     }
-
-    // Share insights once more after final round
-    await this.shareInsights(conversations, maxSteps);
 
     return await this.generateFinalReport(topic);
   }
@@ -65,9 +67,10 @@ class Network {
       const conversationHistory = conversation.getHistory();
 
       try {
+        const messages = conversationHistory.slice(-(maxSteps + 1));
         const message = await this.summarizeConversation(
           conversation.getTopic(),
-          conversationHistory.slice(-maxSteps),
+          messages,
           maxSteps,
         );
         const summary = message?.content;
@@ -78,14 +81,13 @@ class Network {
 
         // Share the summary with other subgroups (excluding the current one)
         for (let j = 0; j < this.groups.length; j++) {
+          conversations[j]
+            .getHistory()
+            .push(`Summary of previous round: ${summary}`);
           if (i !== j) {
-            const otherSubgroup = this.groups[j];
-            for (const agent of otherSubgroup) {
-              this.addSummaryToConversationHistory(
-                agent,
-                `Summary from subgroup ${i + 1}: ${summary}`,
-              );
-            }
+            conversations[j]
+              .getHistory()
+              .push(`Summary from subgroup ${i + 1}: ${summary}`);
             this.logger.log("InsightsShared", {
               fromGroup: j,
               toGroup: i,
@@ -104,23 +106,18 @@ class Network {
     console.log("Insights shared.");
   }
 
-  private addSummaryToConversationHistory(agent: Agent, summary: string): void {
-    const conversationHistory = agent.getConversationHistory();
-    conversationHistory.push({
-      role: "user",
-      content: summary,
-    });
-  }
-
   private async summarizeConversation(
     topic: string,
     conversationHistory: string[],
     maxSteps: number,
   ): Promise<any> {
     try {
-      // Summarize the last N steps of the conversation (plus # subgroups for shared insights)
+      // Summarize the last N steps of the conversation (plus # subgroups to include shared insights, +1 for previous summary)
       conversationHistory = conversationHistory.slice(
-        -Math.min(conversationHistory.length, maxSteps + this.groups.length),
+        -Math.min(
+          conversationHistory.length,
+          maxSteps + this.groups.length + 1,
+        ),
       );
       console.log(
         "Summarizing conversation:\n",
@@ -130,10 +127,10 @@ class Network {
         {
           role: getSystemRole(this.summaryLLMConfig.model),
           content:
-            "You are an expert summarizer tasked with distilling the key insights and arguments from a conversation between experts. " +
-            "The target audience is other groups of experts discussing similar topics. " +
+            "You are an expert summarizer tasked with distilling the key insights and arguments from a partial conversation between experts. " +
+            "The target audience is other groups of experts discussing similar topics, and the intent is to cross-pollinate ideas and insights. " +
             "Analyze the following dialogue and provide a concise summary, focusing on identifying the main insights discussed, " +
-            "the key viewpoints expressed, and areas of agreement or disagreement.",
+            "the key viewpoints expressed, and areas of agreement or disagreement. Try to keep it to a few sentences.",
         },
         {
           role: "user",

@@ -1,166 +1,35 @@
-import OpenAI from "openai";
-import * as dotenv from "dotenv";
-import { ChatCompletionMessageParam } from "openai/resources/chat";
-import { deepResearch } from "./research/deepResearch.js";
 import { callOpenAI, getSystemRole, LLMConfig } from "./utils.js";
-import { Logger } from "./logger.js";
-
-dotenv.config();
-
-const defaultSystemPrompt = `You are a polite, thoughtful and intelligent research collaborator. You are an expert-level subject matter expert on the topics discussed. Provide thoughtful, insightful and respectful responses to the other panel members. Keep it concise and to the point. Share new ideas that arise during the discussion to add depth and breadth to the conversation. If given a specific problem, focus on solving the problem in novel ways. You can also perform research to gather more information.`;
-
-type ToolDefinition = {
-  type: "function";
-  function: {
-    name: string;
-    description: string;
-    parameters: {
-      type: "object";
-      properties: {
-        query: {
-          type: "string";
-          description: string;
-        };
-      };
-      required: ["query"];
-    };
-  };
-};
+import { ChatCompletionMessageParam } from "openai/resources/index.js";
 
 class Agent {
-  private conversationHistory: ChatCompletionMessageParam[] = [];
-
   constructor(
     public id: string,
     private llmConfig: LLMConfig,
-    private system_prompt: string = defaultSystemPrompt,
+    private system_prompt: string,
     public historyLimit: number = 20,
     public breadth: number = 3,
     public depth: number = 2,
-    private logger: Logger,
   ) {}
 
-  private getResearchToolDefinition(): ToolDefinition {
-    return {
-      type: "function",
-      function: {
-        name: "deepResearch",
-        description:
-          "Performs deep research on a given query and returns a list of learnings.",
-        parameters: {
-          type: "object",
-          properties: {
-            query: {
-              type: "string",
-              description: "The query to perform research on.",
-            },
-          },
-          required: ["query"],
-        },
+  public async generateResponse(history: string[]): Promise<string> {
+    const messages = [
+      {
+        role: getSystemRole(this.llmConfig.model),
+        content: this.system_prompt,
       },
-    };
-  }
-
-  public async generateResponse(
-    prompt: string,
-    forceResearch: boolean = false,
-  ): Promise<string> {
-    this.conversationHistory.push({ role: "user", content: prompt });
-
-    const tools: ToolDefinition[] = [this.getResearchToolDefinition()];
-
-    let tool_choice: any = "auto";
-    if (forceResearch) {
-      tool_choice = { type: "function", function: { name: "deepResearch" } };
-    }
-
-    console.log(
-      `${this.id}: Generating response. Force research: ${forceResearch}`,
-    );
+      ...history.map((msg) => ({ role: "user", content: msg })),
+    ];
 
     try {
-      const messages = [
-        {
-          role: getSystemRole(this.llmConfig.model),
-          content:
-            "Your name is " +
-            this.id +
-            ".\n" +
-            this.system_prompt +
-            (forceResearch
-              ? "\nYou MUST use the deepResearch tool this turn!"
-              : ""),
-        },
-        ...this.conversationHistory,
-      ];
-      console.log("Messages:", messages);
-
-      const message = await callOpenAI(this.llmConfig, messages, {
-        tools: tools,
-        tool_choice: tool_choice,
-        // response_format: { type: "json_object" },
-      });
-
-      let parsedResponse = message?.content || "No response";
-      const toolCalls = message?.tool_calls;
-
-      if (toolCalls) {
-        for (const toolCall of toolCalls) {
-          if (toolCall.function.name === "deepResearch") {
-            const query = JSON.parse(toolCall.function.arguments).query;
-            this.logger.log("ResearchEvent", { agent: this.id, query });
-            console.log(`${this.id}: Performing research on query: ${query}`);
-            const researchResult = await this.performResearch(query);
-            const learnings = researchResult.learnings.join("\n");
-
-            parsedResponse = `Researched topic: "${query}", and found the following learnings:\n${learnings}`;
-            this.conversationHistory.push({
-              role: "user",
-              content: parsedResponse,
-            });
-          } else {
-            console.error("Unknown tool call:", toolCall);
-          }
-        }
-      } else {
-        this.conversationHistory.push({
-          role: "assistant",
-          content: parsedResponse,
-        });
-      }
-
-      // Keep only the last N messages
-      if (this.conversationHistory.length > this.historyLimit * 2) {
-        this.conversationHistory = this.conversationHistory.slice(
-          this.conversationHistory.length - this.historyLimit * 2,
-        );
-      }
-
-      return parsedResponse;
+      const message = await callOpenAI(
+        this.llmConfig,
+        messages as ChatCompletionMessageParam[],
+      );
+      return message.content;
     } catch (error) {
       console.error("Error generating response:", error);
       return "Error generating response.";
     }
-  }
-
-  public getConversationHistory(): ChatCompletionMessageParam[] {
-    return this.conversationHistory;
-  }
-
-  public clearConversationHistory(): void {
-    this.conversationHistory = [];
-  }
-
-  public async performResearch(
-    query: string,
-  ): Promise<{ learnings: string[]; visitedUrls: string[] }> {
-    return deepResearch({
-      query: query,
-      breadth: this.breadth,
-      depth: this.depth,
-      llmConfig: this.llmConfig, // TODO: researchLLMConfig
-      logger: this.logger,
-    });
   }
 }
 

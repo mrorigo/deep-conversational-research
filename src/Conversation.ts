@@ -1,5 +1,7 @@
-import Agent from "./Agent";
+import { deepResearch } from "./research/deepResearch.js";
+import Agent from "./Agent.js";
 import { Logger } from "./logger.js"; // Import the logger
+import { LLMConfig } from "./utils.js";
 
 class Conversation {
   private conversationHistory: string[] = [];
@@ -8,9 +10,12 @@ class Conversation {
     private group: number,
     private agents: Agent[],
     private topic: string,
-    private enableResearch: boolean = false,
     private logger: Logger,
+    private researchLLMConfig: LLMConfig,
+    private researchDepth: number = 1,
+    private researchBreadth: number = 2,
   ) {
+    //this.enableResearch = researchQuery.length > 0;
     this.logger.log("ConversationStarted", {
       group,
       topic,
@@ -20,6 +25,7 @@ class Conversation {
 
   public async startRound(
     roundNumber: number,
+    researchQuery: string,
     maxSteps: number = 5,
   ): Promise<void> {
     this.logger.log("RoundStarted", {
@@ -28,27 +34,33 @@ class Conversation {
       topic: this.topic,
     });
 
-    let currentPrompt = `Round ${roundNumber}: Let's continue discussing: ${this.topic}.`;
+    if (researchQuery) {
+      const researchResult = await this.performResearch(researchQuery);
+      const learnings = researchResult.learnings.join("\n");
+
+      this.conversationHistory.push(
+        `Research was made on "${researchQuery}", and the following learnings were found:\n${learnings}`,
+      );
+    }
+
+    // let currentPrompt = `Round ${roundNumber}: We're discussing: ${this.topic}.`;
+
     let currentAgentIndex = 0;
 
     for (let i = 0; i < maxSteps; i++) {
       const currentAgent = this.agents[currentAgentIndex];
 
       // Force research on the first turn of each round
-      const forceResearch = i === 0 && this.enableResearch;
 
       this.logger.log("StepStarted", {
         group: this.group,
         roundNumber,
         stepNumber: i + 1,
         agent: currentAgent.id,
-        forceResearch,
+        researchQuery,
       });
 
-      const response = await currentAgent.generateResponse(
-        currentPrompt,
-        forceResearch,
-      );
+      const response = await currentAgent.generateResponse(this.getHistory());
 
       this.conversationHistory.push(`${currentAgent.id}: ${response}`);
       this.logger.log("MessageSent", {
@@ -57,10 +69,6 @@ class Conversation {
         message: response,
       });
 
-      // Prepare the next prompt based on the current response
-      currentPrompt = `${currentAgent.id} said: ${response}`;
-
-      // Move to the next agent in a round-robin fashion
       currentAgentIndex = (currentAgentIndex + 1) % this.agents.length;
     }
 
@@ -68,6 +76,18 @@ class Conversation {
       group: this.group,
       roundNumber,
       topic: this.topic,
+    });
+  }
+
+  public async performResearch(
+    query: string,
+  ): Promise<{ learnings: string[]; visitedUrls: string[] }> {
+    return deepResearch({
+      query: query,
+      breadth: this.researchBreadth,
+      depth: this.researchDepth,
+      llmConfig: this.researchLLMConfig,
+      logger: this.logger,
     });
   }
 
