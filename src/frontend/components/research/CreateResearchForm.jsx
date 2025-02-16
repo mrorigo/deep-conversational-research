@@ -10,7 +10,6 @@ function CreateResearchForm({ onSubmit }) {
   const [topic, setTopic] = useState("");
   const [numGroups, setNumGroups] = useState(2);
   const [numAgents, setNumAgents] = useState(4);
-  const [enableResearch, setEnableResearch] = useState(false);
   const [researchDepth, setResearchDepth] = useState(1);
   const [researchBreadth, setResearchBreadth] = useState(3);
   const initialModelsString =
@@ -64,6 +63,16 @@ function CreateResearchForm({ onSubmit }) {
       isValid = false;
     }
 
+    if (!researchDepth || researchDepth <= 0) {
+      newErrors.researchDepth = "Research Depth must be greater than 0";
+      isValid = false;
+    }
+
+    if (!researchBreadth || researchBreadth <= 0) {
+      newErrors.researchBreadth = "Research Breadth must be greater than 0";
+      isValid = false;
+    }
+
     setErrors(newErrors);
     return isValid;
   };
@@ -78,7 +87,6 @@ function CreateResearchForm({ onSubmit }) {
         topic: topic,
         num_groups: parseInt(numGroups),
         num_agents: parseInt(numAgents),
-        enableResearch: enableResearch,
         researchDepth: parseInt(researchDepth),
         researchBreadth: parseInt(researchBreadth),
         models: models,
@@ -145,46 +153,35 @@ function CreateResearchForm({ onSubmit }) {
         )}
       </div>
 
-      <div className="form-group form-check">
+      <div className="form-group">
+        <label htmlFor="researchDepth">Research Depth:</label>
         <input
-          type="checkbox"
-          className="form-check-input"
-          id="enableResearch"
-          checked={enableResearch}
-          onChange={(e) => setEnableResearch(e.target.checked)}
+          type="number"
+          className="form-control"
+          id="researchDepth"
+          value={researchDepth}
+          onChange={(e) => setResearchDepth(e.target.value)}
+          required
         />
-        <label className="form-check-label" htmlFor="enableResearch">
-          Enable Research
-        </label>
+        {errors.researchDepth && (
+          <div className="text-danger">{errors.researchDepth}</div>
+        )}
       </div>
 
-      {enableResearch && (
-        <>
-          <div className="form-group">
-            <label htmlFor="researchDepth">Research Depth:</label>
-            <input
-              type="number"
-              className="form-control"
-              id="researchDepth"
-              value={researchDepth}
-              onChange={(e) => setResearchDepth(e.target.value)}
-              required
-            />
-          </div>
-
-          <div className="form-group">
-            <label htmlFor="researchBreadth">Research Breadth:</label>
-            <input
-              type="number"
-              className="form-control"
-              id="researchBreadth"
-              value={researchBreadth}
-              onChange={(e) => setResearchBreadth(e.target.value)}
-              required
-            />
-          </div>
-        </>
-      )}
+      <div className="form-group">
+        <label htmlFor="researchBreadth">Research Breadth:</label>
+        <input
+          type="number"
+          className="form-control"
+          id="researchBreadth"
+          value={researchBreadth}
+          onChange={(e) => setResearchBreadth(e.target.value)}
+          required
+        />
+        {errors.researchBreadth && (
+          <div className="text-danger">{errors.researchBreadth}</div>
+        )}
+      </div>
 
       <div className="form-group">
         <label htmlFor="models">Models:</label>

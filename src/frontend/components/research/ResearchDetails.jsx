@@ -8,7 +8,6 @@ function ResearchDetails({ ws, researchId, onCloseResearch }) {
   const [topic, setTopic] = useState("");
   const [numGroups, setNumGroups] = useState(0);
   const [numAgents, setNumAgents] = useState(0);
-  const [enableResearch, setEnableResearch] = useState(false);
   const [researchDepth, setResearchDepth] = useState(0);
   const [researchBreadth, setResearchBreadth] = useState(0);
   const [models, setModels] = useState("");
@@ -31,7 +30,6 @@ function ResearchDetails({ ws, researchId, onCloseResearch }) {
         if (data.payload.event === "NewResearchConversation") {
           setNumAgents(data.payload.options.agents);
           setNumGroups(data.payload.options.groups);
-          setEnableResearch(data.payload.options.enableResearch);
           setResearchDepth(data.payload.options.researchDepth);
           setResearchBreadth(data.payload.options.researchBreadth);
           setModels(data.payload.options.models.join(", "));
